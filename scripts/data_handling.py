@@ -32,15 +32,14 @@ def download_spreadsheet(
 
 
 def merger_folder(
-        data_folder: str
+        data_release: str
 ) -> str:
 
-    data_folder = os.path.join(data_folder,'result_X204SC24072989-Z02-F007/')
-    clean_data = os.path.join(data_folder,'00.CleanData')
-    raw_data = os.path.join(data_folder,'01.RawData')
+    clean_data = os.path.join(data_release,'00.CleanData')
+    raw_data = os.path.join(data_release,'01.RawData')
 
     # create a combined directry for clean and raw data
-    combined = os.path.join(data_folder,'02.Combined')
+    combined = os.path.join(data_release,'02.Combined')
 
     # Ensure the combined directory exists
     os.makedirs(combined, exist_ok=True)
@@ -57,15 +56,31 @@ def merger_folder(
     return combined
 
 def map_samples(
-        data_folder:str,
-        associations:dict
+        data_release:str,
+        csv_file:str
+
 ):  
     
-    samples_dir = os.path.join(data_folder,
-                               'result_X204SC24072989-Z02-F007',
+    samples_dir = os.path.join(data_release,
                                '01.RawData'
                                )
+
+    dataframe = pd.read_csv(csv_file, 
+                            index_col=False)
+    fields = ['ExpID ExampleYY','Sample_name G0',
+              'amplicon_Univ V45 (U) G0']
+
+    dataframe = dataframe\
+        .dropna(subset=[fields[2]])
+
+    data_df = dataframe[fields]
+    associations = {}
+
+    for i,row in data_df.iterrows():
+        if row[2] not in associations.keys():
+            associations[row[2]] = row[0]
     
+
     if not os.path.exists(samples_dir):
         print(f'Error {samples_dir} not correctly inputed')
         return 
@@ -87,41 +102,6 @@ def map_samples(
 
     print(len(sample_map[key]))
     return sample_map
-
-
-def bin_samples(
-        final_folder:str,
-        data_release:str,
-        csv_file:str
-):
-
-
-    dataframe = pd.read_csv(csv_file, 
-                            index_col=False)
-    fields = ['ExpID ExampleYY','Sample_name G0',
-              'amplicon_Univ V45 (U) G0']
-
-    dataframe = dataframe\
-        .dropna(subset=[fields[2]])
-
-    data_df = dataframe[fields]
-    associations = {}
-
-    for i,row in data_df.iterrows():
-        if row[2] not in associations.keys():
-            associations[row[2]] = row[0]
-
-
-
-    ouptut_path = os.path.join(data_release,'mapping_data.csv')
-    data_df.to_csv(
-        ouptut_path,
-        index=False,
-        sep=","
-        )
-    print(associations)
-    return ouptut_path, associations
-
 
 
 def distribute_samples(
@@ -208,16 +188,10 @@ if __name__ == '__main__':
             sheet_id=SHEET_ID,
             output_path=args.data_release
                         )
-
-    file,associations = bin_samples(
-        final_folder=args.final_folder,
-        data_release=args.data_release,
-        csv_file=output_file
-                        )
     
     mapped = map_samples(
         data_folder=args.data_release,
-        associations=associations
+        csv_file=output_file
     )
     combined_dir = merger_folder(
         data_folder=args.data_release
