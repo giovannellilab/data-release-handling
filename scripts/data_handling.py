@@ -164,16 +164,16 @@ def distribute_samples(
         for s in new_samples:
             print(s)
 
-        try:
-            subprocess.run(['rsync',
-                            '-av', 
-                            '--ignore-existing'] 
-                            + new_samples 
-                            + [subdir], 
-                            check=True)
+        # try:
+        #     subprocess.run(['rsync',
+        #                     '-av', 
+        #                     '--ignore-existing'] 
+        #                     + new_samples 
+        #                     + [subdir], 
+        #                     check=True)
 
-        except subprocess.CalledProcessError as e:
-            print(f"Error during rsync: {e}")            
+        # except subprocess.CalledProcessError as e:
+        #     print(f"Error during rsync: {e}")            
 
 
 if __name__ == '__main__':
