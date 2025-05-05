@@ -8,24 +8,30 @@ import os
 
 import glob
 
+import pickle
+
+from datetime import datetime
+
+import pprint
+
+
 def download_spreadsheet(
         spreadsheet_id:str, 
-        sheet_id:str, 
-        output_path:str
+        sheet_id:str
         )-> str:
     
     output_file = "sample_database_biosample_id.csv"
-    working_dir = "../data_release"
-    output_wget= os.path.join(working_dir,output_file)
+    template_dir = 'template'
+    output_wget= os.path.join(template_dir,output_file)
 
     url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/gviz/tq?tqx=out:csv&gid={sheet_id}"
     command = ["wget","-N" "-O", output_wget, url]
     
-    try:
-        subprocess.run(command, check=True)
-        print(f"Spreadsheet downloaded successfully (if updated) as {output_file}")
-    except subprocess.CalledProcessError as e:
-        print(f"Error downloading spreadsheet: {e}")
+    # try:
+    #     subprocess.run(command, check=True)
+    #     print(f"Spreadsheet downloaded successfully (if updated) as {output_file}")
+    # except subprocess.CalledProcessError as e:
+    #     print(f"Error downloading spreadsheet: {e}")
 
     return output_wget
 
@@ -44,7 +50,7 @@ def merger_folder(
     # Ensure the combined directory exists
     os.makedirs(combined, exist_ok=True)
 
-    # Use rsync to merge directories (preserving structure & skipping duplicates)
+    #Use rsync to merge directories (preserving structure & skipping duplicates)
     try:
         subprocess.run(['rsync', '-a', '--ignore-existing', raw_data + '/', combined], check=True)
         subprocess.run(['rsync', '-a', '--ignore-existing', clean_data + '/', combined], check=True)
@@ -67,6 +73,8 @@ def map_samples(
 
     dataframe = pd.read_csv(csv_file, 
                             index_col=False)
+    print(dataframe)
+
     fields = ['ExpID ExampleYY','Sample_name G0',
               'amplicon_Univ V45 (U) G0']
 
@@ -79,7 +87,6 @@ def map_samples(
     for i,row in data_df.iterrows():
         if row[2] not in associations.keys():
             associations[row[2]] = row[0]
-    
 
     if not os.path.exists(samples_dir):
         print(f'Error {samples_dir} not correctly inputed')
@@ -100,8 +107,66 @@ def map_samples(
             elif key in sample_map:
                 sample_map[key].append(sample)
 
+    # pd.Series({
+    #         'Batch_ID':,
+    #         'download_date':,
+    # }).frame().T
+
     print(len(sample_map[key]))
+    print(sample_map.items())
+
+    # OPen the csv file as a dataframe
+    # check for the rpesence of same Batch_ID,
+    # if TRue exit
+    # else -> append new row 
+    ### return a csv file with info:
+    # - batch_ID
+    # - date
+    # - all samples
+
     return sample_map
+
+
+
+def save_release_info(
+        map_sample: dict, 
+        experiment_type: str,
+        data_release: str
+        ):
+    now = datetime.now()
+    #formatted_date = now.strftime("%d-%m-%Y")
+    #formatted_date = '12-02-2025'
+    formatted_date = '21-02-2025'
+    # info = { formatted_date: map_sample.values()}
+    info = {}
+    info[formatted_date] = map_sample.values
+
+    template_dir = "template"
+    pickle_file = "data_release_2025.pickle"
+    location_file = os.path.join(template_dir,pickle_file)
+
+    print(info)
+
+    # Check if pickle file exists
+    if os.path.exists(location_file):
+        try:
+            with open(location_file, "rb") as handle:
+                existing_data = pickle.load(handle)  # Load existing data
+
+        except (EOFError, pickle.UnpicklingError):
+            existing_data = {}  # If the file is corrupted or empty, initialize with empty dict
+    else:
+        existing_data = {}
+
+    # Merge new data with existing data
+    # existing_data.update(info)
+
+    # # Save updated dictionary back to pickle file
+    # with open(pickle_file, "wb") as handle:
+    #     pickle.dump(existing_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    print(f"Data saved successfully to {location_file}")
+
 
 
 def distribute_samples(
@@ -116,7 +181,6 @@ def distribute_samples(
 
     data_release_dir = os.path.join(
         data_release,
-        'result_X204SC24072989-Z02-F007',
         '02.Combined'
         )
     
@@ -161,7 +225,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser("preprocess_sequences")
     parser.add_argument(
         "-e", "--experiment_type",
-        help="type of files: 16S or 18S",
+        help="type of files: 16_S or 18_S",
         type=str
     )
     parser.add_argument(
@@ -186,17 +250,24 @@ if __name__ == '__main__':
     output_file = download_spreadsheet(
             spreadsheet_id =SPREADSHEET_ID,
             sheet_id=SHEET_ID,
-            output_path=args.data_release
                         )
     
-    mapped = map_samples(
-        data_folder=args.data_release,
-        csv_file=output_file
-    )
+    # mapped = map_samples(
+    #     data_release=args.data_release,
+    #     csv_file=output_file
+    # )
+
     combined_dir = merger_folder(
-        data_folder=args.data_release
+        data_release=args.data_release
     )
 
+    # save_release_info(
+    #     map_sample = mapped,
+    #     experiment_type=args.experiment_type,
+    #     data_release=args.data_release
+    #     )
+    
+    exit(0)
     distribute_samples(
         final_folder =args.final_folder,
         data_release=args.data_release,
