@@ -15,6 +15,15 @@ from datetime import datetime
 import pprint
 
 
+def check_sanity()-> None:
+
+    # # check for the presence of spreadsheet
+
+    # # check for the presence of final directories
+
+    return None
+
+
 def download_spreadsheet(
         spreadsheet_id:str, 
         sheet_id:str
@@ -41,11 +50,15 @@ def merger_folder(
         data_release: str
 ) -> str:
 
-    clean_data = os.path.join(data_release,'00.CleanData')
-    raw_data = os.path.join(data_release,'01.RawData')
+    # # grab data release dir
+    release = os.path.basename(data_release)
+    source_directory = os.path.join(data_release,f'result_{release}')
+    print(source_directory)
+    clean_data = os.path.join(source_directory,'00.CleanData')
+    raw_data = os.path.join(source_directory,'01.RawData')
 
     # create a combined directry for clean and raw data
-    combined = os.path.join(data_release,'02.Combined')
+    combined = os.path.join(source_directory,'02.Combined')
 
     # Ensure the combined directory exists
     os.makedirs(combined, exist_ok=True)
@@ -66,17 +79,21 @@ def map_samples(
         csv_file:str
 
 ):  
-    
+    # # grab data release dir
+
+    # release = os.path.basename(data_release)
+    # source_directory = os.path.join(data_release,f'result_{release}')
+    # print(source_directory)
     samples_dir = os.path.join(data_release,
                                '01.RawData'
                                )
 
     dataframe = pd.read_csv(csv_file, 
                             index_col=False)
-    print(dataframe)
+    #print(dataframe)
 
-    fields = ['ExpID ExampleYY','Sample_name G0',
-              'amplicon_Univ V45 (U) G0']
+    fields = ['ExpID','Sample_name',
+              'amplicon_Univ V45 (U)']
 
     dataframe = dataframe\
         .dropna(subset=[fields[2]])
@@ -85,8 +102,8 @@ def map_samples(
     associations = {}
 
     for i,row in data_df.iterrows():
-        if row[2] not in associations.keys():
-            associations[row[2]] = row[0]
+        if row.iloc[2] not in associations.keys():
+            associations[row.iloc[2]] = row.iloc[0]
 
     if not os.path.exists(samples_dir):
         print(f'Error {samples_dir} not correctly inputed')
@@ -112,8 +129,11 @@ def map_samples(
     #         'download_date':,
     # }).frame().T
 
-    print(len(sample_map[key]))
-    print(sample_map.items())
+    print('Campaigns:',sample_map.keys())
+    print('Samples:',len(samples_dir))
+    #print(sample_map.items())
+    for key,value in sample_map.items():
+        print(f'> {key} --> {value}')
 
     # OPen the csv file as a dataframe
     # check for the rpesence of same Batch_ID,
@@ -178,12 +198,15 @@ def distribute_samples(
     final_fo = final_folder + '/*'
     campaigns = glob.glob(final_fo)
     print(campaigns)
+    release = 'X204SC25036218-Z01-F001'
 
+    # # source dir
     data_release_dir = os.path.join(
         data_release,
         '02.Combined'
         )
-    
+    report_path = os.path.join(data_release,f'report_{release}')
+
     for campaign,samples in map_samples.items():
         #check if campaign exists in final destination:
         current_dir = os.path.join(final_folder,campaign)
@@ -208,24 +231,32 @@ def distribute_samples(
         for s in new_samples:
             print(s)
 
-        # try:
-        #     subprocess.run(['rsync',
-        #                     '-av', 
-        #                     '--ignore-existing'] 
-        #                     + new_samples 
-        #                     + [subdir], 
-        #                     check=True)
+        try:
+            subprocess.run(['rsync',
+                            '-av', 
+                            '--ignore-existing'] 
+                            + new_samples 
+                            + [subdir], 
+                            check=True)
 
-        # except subprocess.CalledProcessError as e:
-        #     print(f"Error during rsync: {e}")            
+            subprocess.run(['rsync',
+                            '-av', 
+                            '--ignore-existing']
+                            + [report_path]
+                            + [subdir],
+                            check=True)
+        
+        except subprocess.CalledProcessError as e:
+            print(f"Error during rsync: {e}")            
 
+        print(f'{os.path.basename(current_dir)} --> copied --------------------')
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser("preprocess_sequences")
     parser.add_argument(
         "-e", "--experiment_type",
-        help="type of files: 16_S or 18_S",
+        help="type of files: 16_S or 18_S or ITS",
         type=str
     )
     parser.add_argument(
@@ -252,14 +283,14 @@ if __name__ == '__main__':
             sheet_id=SHEET_ID,
                         )
     
-    # mapped = map_samples(
-    #     data_release=args.data_release,
-    #     csv_file=output_file
-    # )
-
-    combined_dir = merger_folder(
-        data_release=args.data_release
+    mapped = map_samples(
+        data_release=args.data_release,
+        csv_file=output_file
     )
+
+    # combined_dir = merger_folder(
+    #     data_release=args.data_release
+    # )
 
     # save_release_info(
     #     map_sample = mapped,
@@ -267,7 +298,6 @@ if __name__ == '__main__':
     #     data_release=args.data_release
     #     )
     
-    exit(0)
     distribute_samples(
         final_folder =args.final_folder,
         data_release=args.data_release,
