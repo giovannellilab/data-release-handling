@@ -81,10 +81,10 @@ def map_samples(
 ):  
     # # grab data release dir
 
-    # release = os.path.basename(data_release)
-    # source_directory = os.path.join(data_release,f'result_{release}')
+    release = os.path.basename(data_release)
+    source_directory = os.path.join(data_release,f'result_{release}')
     # print(source_directory)
-    samples_dir = os.path.join(data_release,
+    samples_dir = os.path.join(source_directory,
                                '01.RawData'
                                )
 
