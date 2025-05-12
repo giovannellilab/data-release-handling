@@ -1,6 +1,19 @@
 This repository orgnizes new data release upon distirbution by merging Raw and Clean data
 in the same sample directory and distribuitng it in their corresponding campaigns
 
+STEP0
+Create a directory and Download data in a location
+```bash
+
+mkdir data_release
+wget -i data_release.csv
+unzip result_*
+
+```
+
+STEP1
+
+Merge raw and clean data together as 02.Combined and distribute the samples in their respective location using campaign ID
 
 ```bash
 
