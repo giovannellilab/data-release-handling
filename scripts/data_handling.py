@@ -187,6 +187,71 @@ def save_release_info(
 
     print(f"Data saved successfully to {location_file}")
 
+def distribute_metagenomes(
+        final_folder:str,
+        data_release:str,
+        map_samples:dict,
+        specific_campaig:str = None,
+        dry_run: bool = False
+
+):
+
+    final_fo = final_folder + '/*'
+    campaigns = glob.glob(final_fo)
+    print(campaigns)
+
+    data_release_dir = os.path.join(
+        data_release,
+        '01.Rawdata'
+        )
+
+    # # check existance of campaign directories
+    if selected_campaign:
+        if selected_campaign not in map_samples:
+            print(f"Error: Campaign '{selected_campaign}' not found in map_samples.")
+            return
+        campaign_dir = os.path.join(final_folder, selected_campaign)
+        if not os.path.exists(campaign_dir):
+            print(f"Error: Campaign directory '{campaign_dir}' does not exist in final destination.")
+            return
+        target_campaigns = {selected_campaign: map_samples[selected_campaign]}
+    else:
+        target_campaigns = map_samples
+    
+
+
+    for campaign, samples in target_campaigns.items():
+        current_dir = os.path.join(final_folder, campaign)
+        print(f'Current directory: {current_dir}')
+
+        if not os.path.exists(current_dir):
+            print(f'Error: {current_dir} does not exist.')
+            continue
+        
+        subdir = os.path.join(current_dir, experiment_type)
+        if not os.path.exists(subdir):
+            os.makedirs(subdir)
+            print(f'{subdir} created')
+        else:
+            print(f'{subdir} already existed')
+
+        new_samples = [os.path.join(data_release_dir, sample) for sample in samples]
+        for s in new_samples:
+            print(s)
+
+        rsync_base_cmd = ['rsync', '-av', '--ignore-existing']
+
+        if dry_run:
+            rsync_base_cmd.append('--dry-run')
+
+        try:
+            subprocess.run(rsync_base_cmd + new_samples + [subdir], check=True)
+            #subprocess.run(rsync_base_cmd + [report_path] + [subdir], check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error during rsync: {e}")
+
+
+        print(f'{os.path.basename(current_dir)} --> copied --------------------')
 
 
 def distribute_samples(
@@ -267,6 +332,16 @@ if __name__ == '__main__':
     parser.add_argument(
         "-f", "--final_folder",
         help="directory where you wish to distirbute the new sequences",
+        type=str
+    )
+    parser.add_argument(
+        "-c", "--specific_folder",
+        help="selected campaign to be copied",
+        type=str
+    )
+    parser.add_argument(
+        "-r", "--dry_run",
+        help="executes a dry-run with rsync before actual file copying",
         type=str
     )
     args = parser.parse_args()
