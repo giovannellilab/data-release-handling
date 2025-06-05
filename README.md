@@ -23,7 +23,10 @@ Merge raw and clean data together as 02.Combined and distribute the samples in t
 
 ```bash
 
-python scripts/data_handling.py -e 16_S -d /data_release/X204SC24072989-Z02-F007/ -f ../../sequencing_data/
+python scripts/data_handling.py 
+-e 16_S 
+-d /data_release/X204SC24072989-Z02-F007/result_X204SC24072989-Z02-F007 
+-f ../../sequencing_data/
 
 ```
 GEOMOSAIC UPLOAD
