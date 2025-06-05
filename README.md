@@ -2,9 +2,9 @@
 
 This repository orgnizes new data release upon distirbution by merging Raw and Clean data
 in the same sample directory and distribuitng it in their corresponding campaigns
-
 Moreover, provides an easy to use script for uplaoding Metagnomics samples to our cluster for computational jobs
 
+DOWNLOAD DATA RELEASE
 Create a directory and Download data in a location, Example:
 ```bash
 
@@ -14,7 +14,7 @@ unzip result_X204SC24072989-Z02-F007
 
 ```
 
-
+MERGE AND DISTRIBUTE FILES
 
 Merge raw and clean data together as 02.Combined and distribute the samples in their respective location using campaign ID
 - e Select either 16_S or 18_S or ITS based on the sample type data
