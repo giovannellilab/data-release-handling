@@ -30,7 +30,7 @@ import tempfile
 
 def subset(
         sample_file:str,
-):
+)-> list:
     samples = []
 
     with open(sample_file,'r')as reader:
@@ -44,20 +44,17 @@ def subset(
 
 def build_sample_table(
     dir_samples:str,
-    sample_file:str
+    samples:list
     )->str: 
 
     #pattern_to_sample = os.path.join(dir_samples,sample_pattern)
-
 
     if samples:
         all_samples = [glob.glob(os.path.join(dir_samples,file)) for file in samples]
     else:
         all_samples = glob.glob(dir_samples)
 
-
     project_name = dir_samples.split(os.path.sep)[-3]
-    #final_dir = os.path.join(final_dir,project_name)
 
     FILES = []
     all_rows = []
@@ -82,6 +79,7 @@ def build_sample_table(
             suffix = file.split('_')[-1][0]
             # if sample_name is cannonical G100; jsut splice with [0]
             sample_name = "_".join(file.split('_')[:3])
+            #sample_name = file.split('_')[0]
 
             if suffix == '1':
                 file_forward = file
@@ -193,17 +191,18 @@ if __name__ == '__main__':
         help="Ask user whether to proceed with file upload (yes/no)",
         action="store_true"
     )
-    args = parser.parse_args()
-
-    samples = subset(
-        sample_file=args.subset_samples
-        )
- # parser.add_argument(
+    # parser.add_argument(
     #     "-p", "--pattern_sample",
     #     help="Pattern or prefix for samples",
     #     type=str,
     #     default='G*'
     # )
+    args = parser.parse_args()
+
+    samples = subset(
+        sample_file=args.subset_samples
+        )
+ 
     sample_table, paths_file = build_sample_table(
         dir_samples = args.data_dir,
         sample_file=samples,
