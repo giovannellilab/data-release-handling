@@ -11,10 +11,7 @@ import subprocess
 
 import tempfile
 
-
-# python3 create_sample_table.py  
-# -d /media/edotacca/Loki/sequencing_data/ISL22/Metagenomes/ 
-# -f /dirs.txt
+import sys
 
 
 # NOTE:
@@ -44,26 +41,34 @@ def subset(
 
 def build_sample_table(
     dir_samples:str,
-    samples:list
+    sample_file:str
     )->str: 
 
     #pattern_to_sample = os.path.join(dir_samples,sample_pattern)
+    pattern_files = '*fq.gz'
 
-    if samples:
+    if sample_file:
+
+        samples = subset(
+            sample_file=sample_file
+            )
         all_samples = [glob.glob(os.path.join(dir_samples,file)) for file in samples]
+
     else:
-        all_samples = glob.glob(dir_samples)
+        all_dir_samples = os.path.join(f'{dir_samples}/**/')
+        all_samples = [dire for dire in glob.glob(all_dir_samples)]
+        print(all_samples)
 
-    project_name = dir_samples.split(os.path.sep)[-3]
-
+    project_name = dir_samples.split(os.path.sep)[-2]
     FILES = []
     all_rows = []
     ## WGs file extension
-    pattern_files = '*fq.gz'
 
     for sample in all_samples:
+    
         
         sample = sample[0]
+        print('sample:',sample)
         #selecting samples's files
         files_path = os.path.join(sample,pattern_files)
         all_files = glob.glob(files_path)
@@ -74,8 +79,10 @@ def build_sample_table(
 
         # extracting file names
         files_names = [ file_p.split('/')[-1] for file_p in all_files ]
+        print(files_names)
 
         for file in files_names:
+            #suffix could be changed 
             suffix = file.split('_')[-1][0]
             # if sample_name is cannonical G100; jsut splice with [0]
             sample_name = "_".join(file.split('_')[:3])
@@ -96,21 +103,24 @@ def build_sample_table(
     frame = pd.concat(all_rows)
     print(frame)
 
-    # # saving file
+    # # saving sample table file
 
     file_name_table = f'sample_table_{project_name}.tsv'
     sample_table_file = os.path.join(dir_samples,file_name_table)
+    path_to_sample_table = sample_table_file.split('/')[-1]
 
-    frame.to_csv(file_name_table, sep = '\t', encoding='utf-8', index=False)
+    frame.to_csv(sample_table_file, sep = '\t', encoding='utf-8', index=False)
     print(f'STEP[2] SAVING File {file_name_table} to: {dir_samples}')
 
+    # # saving sample file paths
 
     file_name_paths = f'file_paths_{project_name}.txt'
     file_paths = os.path.join(dir_samples,file_name_paths)
     # wriring to a temporary file for rsync upload
     with open(file_paths,'w') as writer:
         writer.write('\n'.join(f'/{path}' for path in FILES) + '\n')
-        writer.write('\n'.join(f'{sample_table_file}'))
+        writer.write(f'{path_to_sample_table}')
+
     
     return file_name_table, file_paths
 
@@ -119,24 +129,28 @@ def ibisco_uploader(
     sample_table : str,
     file_paths : str,
     dir_samples: str,
-    user_name : str,
-    ask_upload: bool = False,
+    user_name : str
     ):
     # # this function upload files tored in the sample_table to our cluster # #
     # # the files are copied in the assgined 'final_dir' # #
 
 
     # # reading table
-    sample_table_name = os.path.basename(sample_table)    
-    project_name = os.path.dirname(dir_samples).split('/')[-2]
-
+    sample_table_name = os.path.basename(sample_table)
+    project_name = os.path.dirname(dir_samples).split('/')[-1]
+    print('project_name',project_name)
     
     ## replace the user anme with your own account
     HOST_name = 'ibiscohpc-ui.scope.unina.it'
     user_server = '@'.join([user_name,HOST_name])
 
-    final_dir = f'{user_server}:/ibiscostorage/GiovannelliLab/raw/{project_name}'
+    if user_name != 'dgiovannelli':
 
+        final_dir = f'{user_server}:/ibiscostorage/{user_name}/raw/{project_name}'
+    else:
+        final_dir = f'{user_server}:/ibiscostorage/GiovannelliLab/raw/{project_name}'
+    
+    print(f'Data will be uploaded to: {final_dir}')
     # # # ask
     # if ask_upload:
     #     reply = input("Proceed with uploading files? Type 'yes' or 'no': ").strip().lower()
@@ -158,9 +172,15 @@ def ibisco_uploader(
     try:
         subprocess.run(command, check=True)
         print(f'\n STEP[3] Files uploaded to: {final_dir}')
+        os.remove(file_paths)
+
     except subprocess.CalledProcessError as e:
         print(f"\n Error while copying file: {e}")
-    os.remove(file_paths)
+        print(f'\n STEP[3] Files uploaded to: {final_dir}')
+        os.remove(file_paths)
+
+    except subprocess.CalledProcessError as e:
+        print(f"\n Error while copying file: {e}")
 
 
 
@@ -186,11 +206,12 @@ if __name__ == '__main__':
         type=str,
         default='dgiovannelli'
     )
-    parser.add_argument(
-        "--confirm-upload",
-        help="Ask user whether to proceed with file upload (yes/no)",
-        action="store_true"
-    )
+    # parser.add_argument(
+    #     "--upload",
+    #     help="Ask user whether to proceed with file upload (yes/no)",
+    #     type=str,
+    #     action="store_true"
+    #)
     # parser.add_argument(
     #     "-p", "--pattern_sample",
     #     help="Pattern or prefix for samples",
@@ -199,19 +220,15 @@ if __name__ == '__main__':
     # )
     args = parser.parse_args()
 
-    samples = subset(
-        sample_file=args.subset_samples
-        )
- 
+
     sample_table, paths_file = build_sample_table(
-        dir_samples = args.data_dir,
-        sample_file=samples,
+        dir_samples=args.data_dir,
+        sample_file=args.subset_samples,
     )
     ibisco_uploader(
         sample_table=sample_table,
         file_paths=paths_file,
         dir_samples=args.data_dir,
-        ask_upload=args.confirm_upload,
         user_name=args.ibisco_user     
     )
    
