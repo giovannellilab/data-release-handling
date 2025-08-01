@@ -25,9 +25,19 @@ import sys
 # # Takes files  from /media/edotacca/Loki/sequencing_data/
 
 
+
 def subset(
         sample_file:str,
 )-> list:
+    """
+    Select samples specified in a text file
+
+    Args:
+        textfile (str): sample x row.
+
+    Returns:
+        list: samples
+    """
     samples = []
 
     with open(sample_file,'r')as reader:
@@ -126,10 +136,11 @@ def build_sample_table(
 
 
 def ibisco_uploader(
-    sample_table : str,
-    file_paths : str,
+    sample_table: str,
+    file_paths: str,
     dir_samples: str,
-    user_name : str
+    user_name: str,
+    dry_run: bool = False  # default, used if not overridden
     ):
     # # this function upload files tored in the sample_table to our cluster # #
     # # the files are copied in the assgined 'final_dir' # #
@@ -144,41 +155,44 @@ def ibisco_uploader(
     HOST_name = 'ibiscohpc-ui.scope.unina.it'
     user_server = '@'.join([user_name,HOST_name])
 
-    if user_name != 'dgiovannelli':
-
-        final_dir = f'{user_server}:/ibiscostorage/{user_name}/raw/{project_name}'
+    if user_name == 'dgiovannelli':
+        remote_path = f'GiovannelliLab/raw/{project_name}'
     else:
-        final_dir = f'{user_server}:/ibiscostorage/GiovannelliLab/raw/{project_name}'
+        remote_path = f'{user_name}/raw/{project_name}'
+
+    final_dir = f'{user_server}:/ibiscostorage/{remote_path}'
     
     print(f'Data will be uploaded to: {final_dir}')
-    # # # ask
-    # if ask_upload:
-    #     reply = input("Proceed with uploading files? Type 'yes' or 'no': ").strip().lower()
-    #     if reply != 'yes':
-    #         print("Upload aborted by user.")
-    #         sys.exit(1)  # Exits with error code 1
+   
+    if dry_run:
 
-    # copying file-name list form location to final dir
-    command = [
-                'rsync', 
-                '-av', 
-                '--progress',
-                '--no-relative',
-                '--files-from='+ file_paths, 
-                dir_samples, 
-                final_dir
-                ]
+        command = [
+                    'rsync',
+                    '--dry-run',
+                    '-av', 
+                    '--progress',
+                    '--no-relative',
+                    '--files-from='+ file_paths, 
+                    dir_samples, 
+                    final_dir
+                    ]
+
+    else:
+        command = [
+                    'rsync', 
+                    '-av', 
+                    '--progress',
+                    '--no-relative',
+                    '--files-from='+ file_paths, 
+                    dir_samples, 
+                    final_dir
+                    ]
 
     try:
         subprocess.run(command, check=True)
         print(f'\n STEP[3] Files uploaded to: {final_dir}')
         os.remove(file_paths)
-
-    except subprocess.CalledProcessError as e:
-        print(f"\n Error while copying file: {e}")
-        print(f'\n STEP[3] Files uploaded to: {final_dir}')
-        os.remove(file_paths)
-
+    
     except subprocess.CalledProcessError as e:
         print(f"\n Error while copying file: {e}")
 
@@ -206,18 +220,12 @@ if __name__ == '__main__':
         type=str,
         default='dgiovannelli'
     )
-    # parser.add_argument(
-    #     "--upload",
-    #     help="Ask user whether to proceed with file upload (yes/no)",
-    #     type=str,
-    #     action="store_true"
-    #)
-    # parser.add_argument(
-    #     "-p", "--pattern_sample",
-    #     help="Pattern or prefix for samples",
-    #     type=str,
-    #     default='G*'
-    # )
+    parser.add_argument(
+        "--dry-run",
+        help="Will attempt a dry run without uploading files",
+        action="store_true"
+    )
+
     args = parser.parse_args()
 
 
