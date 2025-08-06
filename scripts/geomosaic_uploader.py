@@ -55,32 +55,28 @@ def build_sample_table(
     )->str: 
 
     #pattern_to_sample = os.path.join(dir_samples,sample_pattern)
-    pattern_files = '*fq.gz'
 
     if sample_file:
 
         samples = subset(
             sample_file=sample_file
-            )
-        all_samples = [glob.glob(os.path.join(dir_samples,file)) for file in samples]
+                        )
+        all_samples = [glob.glob(os.path.join(f'{dir_samples}/{file}')) for file in samples]
 
     else:
         all_dir_samples = os.path.join(f'{dir_samples}/**/')
         all_samples = [dire for dire in glob.glob(all_dir_samples)]
-        print(all_samples)
 
     project_name = dir_samples.split(os.path.sep)[-2]
     FILES = []
     all_rows = []
     ## WGs file extension
+    pattern_files = '*.fq.gz'
 
-    for sample in all_samples:
-    
-        
-        sample = sample[0]
-        print('sample:',sample)
+    for sample_dir in sorted(all_samples):
+
         #selecting samples's files
-        files_path = os.path.join(sample,pattern_files)
+        files_path = os.path.join(sample_dir,pattern_files)
         all_files = glob.glob(files_path)
 
         #extracting sample/file path
@@ -89,15 +85,13 @@ def build_sample_table(
 
         # extracting file names
         files_names = [ file_p.split('/')[-1] for file_p in all_files ]
-        print(files_names)
 
         for file in files_names:
-            #suffix could be changed 
+            #suffix could be changed
             suffix = file.split('_')[-1][0]
             # if sample_name is cannonical G100; jsut splice with [0]
             sample_name = "_".join(file.split('_')[:3])
             #sample_name = file.split('_')[0]
-
             if suffix == '1':
                 file_forward = file
             if suffix == '2':
@@ -162,22 +156,25 @@ def ibisco_uploader(
 
     final_dir = f'{user_server}:/ibiscostorage/{remote_path}'
     
-    print(f'Data will be uploaded to: {final_dir}')
    
     if dry_run:
+        print('NOT uploadnig -> dry-run activated \n Samples table built')
+        return
 
-        command = [
-                    'rsync',
-                    '--dry-run',
-                    '-av', 
-                    '--progress',
-                    '--no-relative',
-                    '--files-from='+ file_paths, 
-                    dir_samples, 
-                    final_dir
-                    ]
+    #     command = [
+    #                 'rsync',
+    #                 '--dry-run',
+    #                 '-av', 
+    #                 '--progress',
+    #                 '--no-relative',
+    #                 '--files-from='+ file_paths, 
+    #                 dir_samples, 
+    #                 final_dir
+    #                 ]
 
     else:
+        print(f'Data will be uploaded to: {final_dir}')
+
         command = [
                     'rsync', 
                     '-av', 
@@ -221,7 +218,7 @@ if __name__ == '__main__':
         default='dgiovannelli'
     )
     parser.add_argument(
-        "--dry-run",
+        "-z","--dry_run",
         help="Will attempt a dry run without uploading files",
         action="store_true"
     )
@@ -237,7 +234,8 @@ if __name__ == '__main__':
         sample_table=sample_table,
         file_paths=paths_file,
         dir_samples=args.data_dir,
-        user_name=args.ibisco_user     
+        user_name=args.ibisco_user,
+        dry_run=args.dry_run
     )
    
 
