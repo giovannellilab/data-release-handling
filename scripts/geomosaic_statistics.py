@@ -7,6 +7,7 @@ import pandas as pd
 import re
 from tqdm import tqdm
 from contextlib import redirect_stdout
+import json
 
 ####NOTA####
 # this script is executed by typing on terminal:
@@ -43,6 +44,46 @@ def get_samples(geo_samples:str,output_dir:str):
         print(f'No files named: {geo_samples} found')
         return []
 
+def get_fastp_stats(geomosaic_work_dir:str,samples:list,pckg:str,output:str):
+
+    file_output = os.path.join(output,'reads_count.csv')
+    dataframe = pd.DataFrame(columns = ['samples','reads'])
+
+    if os.path.exists(file_output):
+        try:
+            dataframe = pd.read_csv(file_output, sep=',')
+            return dataframe, file_output
+        except Exception:
+            os.remove(file_output)
+    else:
+        all_samples = []
+        for s in tqdm(samples, desc="Processing reads"):
+            pckg_dir = os.path.join(geomosaic_work_dir,s,pckg)
+            file = os.path.join(pckg_dir,'report.json')
+
+            if os.path.exists(pckg):
+                with open(file, "r") as f:
+                    data = json.load(f)
+
+                    summary = data["summary"]
+                    filtering = data["filtering_result"]
+
+                    stats = {
+                "Sample": s,
+                "Total_Reads_Raw": summary['before_filtering']['total_reads'],
+                "Total_Reads_Clean": summary['after_filtering']['total_reads'],
+                "GC_Content_Clean": summary['after_filtering']['gc_content'] * 100,
+                "Duplication_Rate": data['duplication']['rate'] * 100
+                }
+                all_samples.append(stats)
+            else:
+                continue
+
+        dataframe = pd.DataFrame(all_samples,columns = ['sample','Total_Reads_Raw','Total_Reads_Clean','GC_content','Duplication_Rate'])
+        dataframe.to_csv(file_output, sep = ',', index = False)
+        return dataframe, file_output
+
+
 
 def get_fastp_readcounts(geomosaic_work_dir:str,samples:list,pckg:str,output:str):
 
@@ -70,6 +111,7 @@ def get_fastp_readcounts(geomosaic_work_dir:str,samples:list,pckg:str,output:str
 
             else:
                 print(f'No {pckg_dir} found')
+                continue
 
         dataframe = pd.DataFrame(all_counts, columns = ['samples','reads'])
         dataframe.to_csv(file_output, sep = ',', index = False)
@@ -212,6 +254,8 @@ def compute_statistics(geomosaic_work_dir:str, output_dir:str, sample_list:list,
 
     if sample_list:
 
+        print('[+] Parsing FASTP report')
+        df_fastp_stats, file_fastp = get_fastp_stats(geomosaic_work_dir , sample_list, 'fastp',output_dir)
         print('[+] Parsing fasp reads Qc')
         df_reads_counts,file_reads = get_fastp_readcounts( geomosaic_work_dir , sample_list, 'fastqc_readscount',output_dir)
         print('[+] Parsing assembly_contigs..')
@@ -224,6 +268,7 @@ def compute_statistics(geomosaic_work_dir:str, output_dir:str, sample_list:list,
         with open(log_file, 'wt') as f:
             
             with redirect_stdout(f):
+
         #----------------------------------------------------------------------------------------------------
                 # calcualte average reads per sample:
                 if df_reads_counts.empty:
