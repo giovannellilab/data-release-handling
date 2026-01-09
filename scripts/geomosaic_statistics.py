@@ -8,11 +8,12 @@ import re
 from tqdm import tqdm
 from contextlib import redirect_stdout
 import json
+import sys
 
 ####NOTA####
 # this script is executed by typing on terminal:
+# conda activate geomosaic
 # python geomosaic_statistics.py -w $campaign/geomosaic/ -s $campaign/list_samples.txt 
-# it will output 3 files:
 
 
 def main():
@@ -36,84 +37,156 @@ def get_samples(geo_samples:str,output_dir:str):
     os.makedirs(output_dir, exist_ok=True)
 
     if os.path.exists(geo_samples):
+        
+        try:
+            with open(geo_samples,'r') as reader:
+                samples = [line.strip() for line in reader]
+                if samples:
+                    return sorted(samples), output_dir
+                else:
+                    print("Sample list is empty")
+                    sys.exit()
+    
+        except Exception as error:
+            return None
 
-        with open(geo_samples,'r') as reader:
-            samples = [line.strip() for line in reader]
-            return samples, output_dir
     else:
         print(f'No files named: {geo_samples} found')
         return []
 
+def check_exists(file:str):
+
+    if os.path.exists(file):
+
+        try:
+            dataframe = pd.read_csv(file, sep=',')
+            return dataframe
+            
+        except Exception as e:
+            print(f"Error while reading {file}")
+            return None
+
+
+def get_tax_classified_reads(geomosaic_work_dir:str,samples:list,pckg:str,output:str):
+    
+    taxa_rank = "genus.tsv"
+    taxa = taxa_rank.split('.')[0]
+    file_output = os.path.join(output,f'kaiju_{taxa}_count.csv')
+
+    dataframe = check_exists(file_output)
+
+    if dataframe is not None:
+        print('[+] Loading previous KAIJU report')
+        return dataframe, file_output
+    
+    else:
+        all_counts = []
+        print('[+] Parsing KAIJU output tables')
+
+        for s in tqdm(samples, desc="Processing taxa classification"):
+            pckg_dir = os.path.join(geomosaic_work_dir,s,pckg)
+
+            file = os.path.join(pckg_dir,taxa_rank)
+            if os.path.exists(file):
+                # this give paired-reads NOT single reads count
+                dataframe = pd.read_csv(file,sep="\t")
+                unclassified = ["unclassified",f"cannot be assigned to a (non-viral) {taxa}"]
+                unclass_reads = dataframe.loc[dataframe["taxon_name"].isin(unclassified), "reads"].sum()
+
+                taxa_table = dataframe.set_index("taxon_name")
+                taxa_table.drop(labels = unclassified,axis = 0, inplace=True)
+                class_reads = taxa_table["reads"].sum()
+
+                all_counts.append({'sample': s,'class_read-pairs': int(class_reads),'unclass_read-pairs' : int(unclass_reads)})
+            else:
+                print(f"File {file} NOt found")
+                continue
+    
+    dataframe = pd.DataFrame(all_counts, columns = ['sample','class_read-pairs','unclass_read-pairs'])
+    dataframe.to_csv(file_output, sep = ',', index = False)
+
+    return dataframe, file_output
+                    
+
+
 def get_fastp_stats(geomosaic_work_dir:str,samples:list,pckg:str,output:str):
 
-    file_output = os.path.join(output,'reads_count.csv')
-    dataframe = pd.DataFrame(columns = ['samples','reads'])
+    file_output = os.path.join(output,'fastp_count.csv')
+    dataframe = check_exists(file_output)
 
-    if os.path.exists(file_output):
-        try:
-            dataframe = pd.read_csv(file_output, sep=',')
-            return dataframe, file_output
-        except Exception:
-            os.remove(file_output)
+    if dataframe is not None:
+        print('[+] Loading previous FASTP report')
+        return dataframe, file_output
+    
     else:
+        print('[+] Parsing FASTP report')
         all_samples = []
         for s in tqdm(samples, desc="Processing reads"):
+            
             pckg_dir = os.path.join(geomosaic_work_dir,s,pckg)
-            file = os.path.join(pckg_dir,'report.json')
+            if os.path.exists(pckg_dir):
+                file = os.path.join(pckg_dir,'report.json')
 
-            if os.path.exists(pckg):
-                with open(file, "r") as f:
-                    data = json.load(f)
+                if os.path.exists(file):
+                    with open(file, "r") as f:
+                        data = json.load(f)
 
-                    summary = data["summary"]
-                    filtering = data["filtering_result"]
+                        summary = data["summary"]
+                        filtering = data["filtering_result"]
 
-                    stats = {
-                "Sample": s,
-                "Total_Reads_Raw": summary['before_filtering']['total_reads'],
-                "Total_Reads_Clean": summary['after_filtering']['total_reads'],
-                "GC_Content_Clean": summary['after_filtering']['gc_content'] * 100,
-                "Duplication_Rate": data['duplication']['rate'] * 100
-                }
-                all_samples.append(stats)
+                        stats = {
+                        "sample": s,
+                        "total_reads_raw": summary['before_filtering']['total_reads'],
+                        "total_reads_clean": summary['after_filtering']['total_reads'],
+                        "discarded_reads" : int(summary['before_filtering']['total_reads'] - summary['after_filtering']['total_reads']),
+                        "gc_content": round(summary['after_filtering']['gc_content'] * 100,2),
+                        "duplication": round(data['duplication']['rate'] * 100,2)
+                        }
+
+                        all_samples.append(stats)
             else:
+                print(f'No {pckg_dir} found')
                 continue
-
-        dataframe = pd.DataFrame(all_samples,columns = ['sample','Total_Reads_Raw','Total_Reads_Clean','GC_content','Duplication_Rate'])
-        dataframe.to_csv(file_output, sep = ',', index = False)
-        return dataframe, file_output
+    
+    dataframe = pd.DataFrame(all_samples, columns = ['sample','total_reads_raw','total_reads_clean','discarded_reads','gc_content','duplication'])
+    dataframe.to_csv(file_output, sep = ',', index = False)
+    
+    return dataframe, file_output
 
 
 
 def get_fastp_readcounts(geomosaic_work_dir:str,samples:list,pckg:str,output:str):
 
     file_output = os.path.join(output,'reads_count.csv')
-    dataframe = pd.DataFrame(columns = ['samples','reads'])
+    dataframe = check_exists(file_output)
 
-    if os.path.exists(file_output):
-        try:
-            dataframe = pd.read_csv(file_output, sep=',')
-            return dataframe, file_output
-        except Exception:
-            os.remove(file_output)
+    if dataframe is not None:
+        print('[+] Loading previous READSQC report')
+
+        return dataframe, file_output
     
     else:
+        print('[+] Parsing READSQC report')
         all_counts = []
+        
         for s in tqdm(samples, desc="Processing reads"):
+            
             pckg_dir = os.path.join(geomosaic_work_dir,s,pckg)
-
             if os.path.exists(pckg_dir):
+
                 file = os.path.join(pckg_dir,'geomosaic_readscount.txt')
+                if os.path.exists(file):
 
-                with open(file,'r') as reader:
-                    count = reader.readline().strip()
-                    all_counts.append({'samples': s,'reads': int(count)})
-
+                    with open(file,'r') as reader:
+                        count = reader.readline().strip()
+                        all_counts.append({'sample': s, 'reads': int(count)})
+                else:
+                    print(f'No {file} found')
             else:
                 print(f'No {pckg_dir} found')
                 continue
 
-        dataframe = pd.DataFrame(all_counts, columns = ['samples','reads'])
+        dataframe = pd.DataFrame(all_counts, columns = ['sample','reads'])
         dataframe.to_csv(file_output, sep = ',', index = False)
 
         return dataframe, file_output
@@ -123,17 +196,15 @@ def get_contigs_length(geomosaic_work_dir:str,samples:list,pckg:str,output):
 
     #HEADER_PATTERN = re.compile(r'flag=(\d+)\s+multi=([\d\.]+)\s+len=(\d+)')
     file_output = os.path.join(output,'contigs_stats.csv')
-    #dataframe = pd.DataFrame(columns = ['sample', 'total_length_bp','n_contigs'])
+    dataframe = check_exists(file_output)
 
-    if os.path.exists(file_output):
-        try:
-            dataframe = pd.read_csv(file_output, sep=',')
-            return dataframe, file_output
-        except Exception:
-            os.remove(file_output)
+    if dataframe is not None:
+        return dataframe, file_output
 
     else:
+        print('[+] Parsing assembly_contigs..')
         all_contigs_lengths= []
+
         for s in tqdm(samples, desc="Processing contigs"):
             pckg_dir = os.path.join(geomosaic_work_dir,s,pckg)
 
@@ -145,17 +216,15 @@ def get_contigs_length(geomosaic_work_dir:str,samples:list,pckg:str,output):
                 
                 try:
                         for record in (SeqIO.parse(file,'fasta')):
-
                             total_assembly_length += len(record.seq)
                             n_contigs += 1
-
-                        all_contigs_lengths.append({'sample': s, 'total_length_bp': total_assembly_length, 'n_contigs': n_contigs})
+                        all_contigs_lengths.append({'sample': s, 'assembly_lenght': total_assembly_length, 'n_contigs': n_contigs})
                             
                 except Exception as e:
                     print(f"An error occurred during file parsing: {e}")
                     return
 
-        dataframe = pd.DataFrame(all_contigs_lengths, columns = ['sample', 'total_length_bp','n_contigs'])
+        dataframe = pd.DataFrame(all_contigs_lengths, columns = ['sample', 'assembly_lenght','n_contigs'])
         dataframe.to_csv(os.path.join(file_output), sep = ',', index = False)
 
     return dataframe, file_output
@@ -164,22 +233,15 @@ def get_contigs_length(geomosaic_work_dir:str,samples:list,pckg:str,output):
 
 def get_mags_stats(source_path:str,samples:list,pckg:str,output):
 
-
     all_dataframes = []
-    dataframe = pd.DataFrame(columns = ['MAGs','sample','Completeness','Contamination',
-                                            'weighted_completeness','weighted_contamination',
-                                            'total_length_bp','n_contigs'])
     
     main_file_out = os.path.join(output,'all_samples_mags.tsv')
+    dataframe = check_exists(main_file_out)
 
-    if os.path.exists(main_file_out):
-        try:
-            dataframe = pd.read_csv(main_file_out, sep='\t')
-            return dataframe, main_file_out
-        
-        except Exception:
-            os.remove(main_file_out)
-
+    if dataframe is not None:
+        return dataframe, main_file_out
+    
+    print('[+] parsing MAGs stats file..')
     for s in tqdm(samples, desc="Processing MAGs"):
 
         pckg_dir = os.path.join(source_path,s,pckg)
@@ -207,7 +269,6 @@ def get_mags_stats(source_path:str,samples:list,pckg:str,output):
                 if os.path.exists(MAG):
                     
                     for record in (SeqIO.parse(MAG,'fasta')):
-                        
                         total_mag_lenght += len(record.seq)
                         n_contigs += 1
                         
@@ -223,7 +284,7 @@ def get_mags_stats(source_path:str,samples:list,pckg:str,output):
                                          'weighted_completness': weighted_complet, 'weighted_contamination': weighted_contam,
                                           'total_length_bp': total_mag_lenght, 'n_contigs': n_contigs})
 
-        df = pd.DataFrame(all_mags_lengths,columns = ['MAGs','sample','Completeness','Contamination',
+            df = pd.DataFrame(all_mags_lengths,columns = ['MAGs','sample','Completeness','Contamination',
                                                     'weighted_completeness','weighted_contamination',
                                                     'total_length_bp','n_contigs'])
         
@@ -234,6 +295,7 @@ def get_mags_stats(source_path:str,samples:list,pckg:str,output):
     dataframe.to_csv(main_file_out, sep = '\t', index = False)
     
     return dataframe, main_file_out
+
 
 
 def average(dataframe:pd.DataFrame,var:str):
@@ -248,22 +310,40 @@ def average(dataframe:pd.DataFrame,var:str):
             return round(avg) 
     else:
         return 0
-    
+        
 
 def compute_statistics(geomosaic_work_dir:str, output_dir:str, sample_list:list,output_log_file='shell_stats.txt'):
 
     if sample_list:
 
-        print('[+] Parsing FASTP report')
-        df_fastp_stats, file_fastp = get_fastp_stats(geomosaic_work_dir , sample_list, 'fastp',output_dir)
-        print('[+] Parsing fasp reads Qc')
-        df_reads_counts,file_reads = get_fastp_readcounts( geomosaic_work_dir , sample_list, 'fastqc_readscount',output_dir)
-        print('[+] Parsing assembly_contigs..')
-        df_assembly_lengths,file_contigs = get_contigs_length( geomosaic_work_dir, sample_list, 'megahit',output_dir)
-        print('[+] parsing MAGs stats file..')
-        df_mags_stats , file_mags = get_mags_stats(geomosaic_work_dir,sample_list,'mags',output_dir)
+        df_tax_stats, file_kaiju = get_tax_classified_reads(geomosaic_work_dir,sample_list,'kaiju', output_dir)
+
+        df_fastp_stats, file_fastp = get_fastp_stats(geomosaic_work_dir, sample_list, 'fastp', output_dir)
+
+        df_reads_counts,file_reads = get_fastp_readcounts( geomosaic_work_dir, sample_list, 'fastqc_readscount', output_dir)
+
+        df_assembly_lengths,file_contigs = get_contigs_length( geomosaic_work_dir, sample_list, 'megahit', output_dir)
+
+        #df_mags_stats , file_mags = get_mags_stats(geomosaic_work_dir,sample_list,'mags',output_dir)
         print('\n')
 
+        all_stats_df = [df_fastp_stats, df_reads_counts, df_tax_stats, df_assembly_lengths]
+
+        # gather reads and assembly based stats
+        
+        stats_table = pd.DataFrame(sorted(sample_list), columns=["sample"])
+        
+        for df in all_stats_df:
+            if df is not None:
+                temp = pd.merge(stats_table,df ,how='left', on='sample')
+                stats_table = temp.copy()
+        
+        print('\n',stats_table,'\n')
+        table_output = os.path.join(output_dir,"stats_table.tsv")
+        stats_table.to_csv(table_output, sep="\t", index = False)
+
+        '''
+        
         log_file = os.path.join(output_dir,output_log_file)
         with open(log_file, 'wt') as f:
             
@@ -307,6 +387,7 @@ def compute_statistics(geomosaic_work_dir:str, output_dir:str, sample_list:list,
     else:
         return None
 
+'''
 
 def parse_args():
     parser = argparse.ArgumentParser("TEXT HERE")
