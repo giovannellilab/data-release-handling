@@ -29,15 +29,65 @@ python scripts/data_handling.py
 -f ../../sequencing_data/
 
 ```
-GEOMOSAIC UPLOAD
+## GEOMOSAIC STATISTICS
 
-The following script uploads forward and reverse files for each sample declared in a .txt file, along with a sample_table_{campaign}.tsv file used by GEOMOSAIC pipeline
+This script collects and gather statistics obtained running the GEOMOSAIC pipeline, in particular it gets you:
+- fastp counts (raw and cleaned)
+- contigs counts
+- assembly stats -> assembly_stats.tsv
+- mags statistics
+For getting the information you want, you must ensure to have run the following modules:
+- pre_processing, assembly, assembly_qc, binning_qa, and mags_retrieval modules
+This script MUST BE uploaded to the server in your own directory, for example in your own user dir 
+ex. user/etaccaliti
+
+You can do:
+```bash
+
+scp scripts/geomosaic_statistics.py {username}@ibisco-hpc.ui.unina.it:/{remote_path}
+
+```
+
 
 ```bash
 
-python create_sample_table.py  
--d /media/edotacca/Loki/sequencing_data/Campaign/Metagenomes/ 
--s /sample_list.txt
--u 'user_name'
+python scripts/geomosaic_statistics.py -h
+usage: Collect statistics and simple average [-h] -w WORKING_DIR -s SAMPLES -o OUTPUT_DIR
+
+options:
+  -h, --help            show this help message and exit
+  -w WORKING_DIR, --working_dir WORKING_DIR
+                        Absolute apth to geomosaiuc working directory.
+  -s SAMPLES, --samples SAMPLES
+                        Samples file list.
+  -o OUTPUT_DIR, --output_dir OUTPUT_DIR
+                        Where the files are wirtten.
+
+```
+
+## GEOMOSAIC UPLOADER
+
+The following script uploads forward and reverse files for each sample declared in a sample_table_{campaign}.tsv file (The likes of geomosaic ). 
+
+```bash
+
+python scripts/geomosaic_uploader.py -h
+usage: Upload raw seqs AND sample_table.tsv to IBISCO server [-h] [-d DATA_DIR] [-t SAMPLE_TABLE] [-c CAMPAIGN_NAME] [-p PATTERN] [-s SUBSET_SAMPLES] [-u IBISCO_USER] [-z]
+
+options:
+  -h, --help            show this help message and exit
+  -d, --data_dir DATA_DIR
+                        directory storing sample sequences
+  -t, --sample_table SAMPLE_TABLE
+                        provides geomosaic sample table
+  -c, --campaign_name CAMPAIGN_NAME
+                        Provide campaign name: Ex ARG23 or TEST
+  -p, --pattern PATTERN
+                        Sequence pattern to search, default: *fq.gz
+  -s, --subset_samples SUBSET_SAMPLES
+                        provide a text file with each line a sample
+  -u, --ibisco_user IBISCO_USER
+                        Provide user account
+  -z, --dry_run         Will attempt a dry run without uploading files
 
 ```
