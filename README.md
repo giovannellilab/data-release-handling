@@ -14,12 +14,16 @@ unzip result_X204SC24072989-Z02-F007
 
 ```
 
-MERGE AND DISTRIBUTE FILES
+### CREATE CONDA ENV
+```bash
+conda env create -f environment.yml
+```
+### MERGE AND DISTRIBUTE FILES
 
 Merge raw and clean data together as 02.Combined and distribute the samples in their respective location using campaign ID
-- e Select either 16_S or 18_S or ITS based on the sample type data
-- d newly downloaded file location
-- f Parent final dir destination (NOTE: Directories are automatically selected based on the following google sheet )
+- -e Select either 16_S or 18_S or ITS based on the sample type data
+- -d newly downloaded file location
+- -f Parent final dir destination (NOTE: Directories are automatically selected based on the following google sheet )
 
 ```bash
 
@@ -29,7 +33,7 @@ python scripts/data_handling.py
 -f ../../sequencing_data/
 
 ```
-## GEOMOSAIC STATISTICS
+### GEOMOSAIC STATISTICS
 
 This script collects and gather statistics obtained running the GEOMOSAIC pipeline, in particular it gets you:
 - fastp counts (raw and cleaned)
@@ -65,7 +69,7 @@ options:
 
 ```
 
-## GEOMOSAIC UPLOADER
+### GEOMOSAIC UPLOADER
 
 The following script uploads forward and reverse files for each sample declared in a sample_table_{campaign}.tsv file (The likes of geomosaic ). 
 
