@@ -45,13 +45,13 @@ For getting the information you want, you must ensure to have run the following 
 This script MUST BE uploaded to the server in your own directory, for example in your own user dir 
 ex. user/etaccaliti
 
-You can do:
+Upload the script to remote server:
 ```bash
 
 scp scripts/geomosaic_statistics.py {username}@ibisco-hpc.ui.unina.it:/{remote_path}
 
 ```
-
+Run the following command, substituting with the right paths and flags
 
 ```bash
 
@@ -73,6 +73,7 @@ options:
 
 The following script uploads forward and reverse files for each sample declared in a sample_table_{campaign}.tsv file (The likes of geomosaic ). 
 
+Run the following command, substituting with the right paths and flags:
 ```bash
 
 python scripts/geomosaic_uploader.py -h
