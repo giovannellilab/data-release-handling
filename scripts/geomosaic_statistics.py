@@ -363,7 +363,7 @@ def compute_stats(output_dir:str,dataframes:list,output_log_file='shell_stats.tx
 
 
 def parse_args():
-    parser = argparse.ArgumentParser("TEXT HERE")
+    parser = argparse.ArgumentParser("Collect statistics and simple average")
     
     parser.add_argument("-w", "--working_dir",
         help="Absolute apth to geomosaiuc working directory.",

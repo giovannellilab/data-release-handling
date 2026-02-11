@@ -4,8 +4,8 @@ import pandas as pd
 import glob
 import argparse
 import subprocess
-import tempfile
 import sys
+
 ### AUTHOR: EDOARDO TACCALITI ###
 
 # This script uses a sample table (the one used by Geomosaic setup ) to upload WGS seqeunces
@@ -52,7 +52,7 @@ def main():
 
 def parse_args():
 
-    parser = argparse.ArgumentParser("preprocess_sequences")
+    parser = argparse.ArgumentParser("Upload raw seqs AND sample_table.tsv to IBISCO server")
     parser.add_argument(
         "-d", "--data_dir",
         help="directory storing sample sequences",
