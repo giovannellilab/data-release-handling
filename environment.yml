@@ -1,0 +1,13 @@
+name: data-release
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - biopython          # For Bio.SeqIO
+  - pandas             # For pd
+  - tqdm               # For progress bars
+  - pip
+  - pip:
+    # Add any niche pip-only packages here if needed
+    - setuptools
