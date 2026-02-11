@@ -1,38 +1,13 @@
 
 
-This repository orgnizes new data release upon distirbution by merging Raw and Clean data
-in the same sample directory and distribuitng it in their corresponding campaigns
-Moreover, provides an easy to use script for uplaoding Metagnomics samples to our cluster for computational jobs
+This repository cotains three scripts for easing common practices in day-t-day routine. Uploading of raw readds to a server to be ready for GEOMOSAIC setup, collection and gathering of basic statistics regarding results obtained after running geomosaic and distribution of newly released sequences from a common folder based on our sample_database.
 
-DOWNLOAD DATA RELEASE
-Create a directory and Download data in a location, Example:
-```bash
-
-mkdir data_release
-wget -i X204SC24072989-Z02-F007.csv
-unzip result_X204SC24072989-Z02-F007
-
-```
 
 ### CREATE CONDA ENV
 ```bash
 conda env create -f environment.yml
 ```
-### MERGE AND DISTRIBUTE FILES
 
-Merge raw and clean data together as 02.Combined and distribute the samples in their respective location using campaign ID
-- -e Select either 16_S or 18_S or ITS based on the sample type data
-- -d newly downloaded file location
-- -f Parent final dir destination (NOTE: Directories are automatically selected based on the following google sheet )
-
-```bash
-
-python scripts/data_handling.py 
--e 16_S 
--d /data_release/X204SC24072989-Z02-F007/result_X204SC24072989-Z02-F007 
--f ../../sequencing_data/
-
-```
 ### GEOMOSAIC STATISTICS
 
 This script collects and gather statistics obtained running the GEOMOSAIC pipeline, in particular it gets you:
@@ -48,7 +23,7 @@ ex. user/etaccaliti
 Upload the script to remote server:
 ```bash
 
-scp scripts/geomosaic_statistics.py {username}@ibisco-hpc.ui.unina.it:/{remote_path}
+scp scripts/geomosaic_statistics.py {username}@ibiscohpc-ui.scope.unina.it:/{remote_path}
 
 ```
 Run the following command, substituting with the right paths and flags
@@ -71,7 +46,17 @@ options:
 
 ### GEOMOSAIC UPLOADER
 
-The following script uploads forward and reverse files for each sample declared in a sample_table_{campaign}.tsv file (The likes of geomosaic ). 
+The following script uploads forward and reverse files for each sample declared in a sample_table_{campaign}.tsv file (The likes of geomosaic ).
+Either, pass a sample_table.tsv file such as:
+
+| forward                    | reverse                     | sample_alias |
+| ---------------------------|-----------------------------|--------------|
+| AC_280625_F_RBKMV.fastq.gz | AC_280625_F_RBKTMV.fastq.gz | AC_280625_F  |
+| BC_200625_S_RBKMV.fastq.gz | BC_200625_S_RBKTMV.fastq.gz | BC_200625_S  |
+| LS_230625_F_RBKMV.fastq.gz | LS_230625_F_RBKTMV.fastq.gz | LS_230625_F  |
+| SF_221019_F_RBKMV.fastq.gz | SF_221019_F_RBKTMV.fastq.gz | SF_221019_F  |
+| SF_221019_S_RBKMV.fastq.gz | SF_221019_S_RBKTMV.fastq.gz | SF_221019_S  |
+
 
 Run the following command, substituting with the right paths and flags:
 ```bash
@@ -94,5 +79,30 @@ options:
   -u, --ibisco_user IBISCO_USER
                         Provide user account
   -z, --dry_run         Will attempt a dry run without uploading files
+
+```
+
+### DATA-HANDLING
+
+DOWNLOAD DATA RELEASE
+Create a directory and Download data in a location, Example:
+```bash
+
+mkdir data_release
+wget -i X204SC24072989-Z02-F007.csv
+unzip result_X204SC24072989-Z02-F007
+
+```
+Merge raw and clean data together as 02.Combined and distribute the samples in their respective location using campaign ID
+- -e Select either 16_S or 18_S or ITS based on the sample type data
+- -d newly downloaded file location
+- -f Parent final dir destination (NOTE: Directories are automatically selected based on the following google sheet )
+
+```bash
+
+python scripts/data_handling.py 
+-e 16_S 
+-d /data_release/X204SC24072989-Z02-F007/result_X204SC24072989-Z02-F007 
+-f ../../sequencing_data/
 
 ```
