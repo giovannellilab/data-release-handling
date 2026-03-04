@@ -27,6 +27,8 @@ def main():
         sample_table = args.sample_table
         if os.path.exists(sample_table):
             print(f'Provided sample table: {os.path.basename(sample_table)} exists')
+            df = pd.read_csv(sample_table, sep='	')
+            print(df)
         else:
             print(f'Provided sample table or path: {sample_table} does NOT exists')
 
@@ -37,7 +39,7 @@ def main():
         sample_table = build_sample_table(
             dir_samples=args.data_dir,
             sample_file=args.subset_samples,
-            project_name=args.project_name,
+            project_name=args.campaign_name,
             pattern=args.pattern
 
         )
@@ -45,7 +47,7 @@ def main():
     ibisco_uploader(
         sample_table=sample_table,
         dir_samples=args.data_dir,
-        project_name=args.project_name,
+        project_name=args.campaign_name,
         user_name=args.ibisco_user,
         dry_run=args.dry_run
     )
@@ -185,21 +187,7 @@ def build_sample_table(
     print(f'STEP[2] SAVING File {file_name_table} to: {dir_samples}')
 
 
-    user_param = input("Is the sample table correct? (yes/no): ").strip().lower()
-
-    if user_param in ['yes', 'y']:
-        # This returns the data to whatever called this function
-        return sample_table_file
-        
-    elif user_param in ['no', 'n']:
-        print(f"\n[!] Please modify the table at: {sample_table_file}")
-        print("[!] Script exiting so you can make changes.")
-        sys.exit(0)
-    
-    else:
-        print("Invalid input. Please enter 'yes' or 'no'.")
-        # Optional: You could call the function again here to retry
-        return False
+    return sample_table_file
 
 
 
