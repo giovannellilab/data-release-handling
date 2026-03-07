@@ -36,14 +36,7 @@ def main():
         
         print(f'Creating sample table from dir: {args.data_dir}')
 
-        # sample_table = build_sample_table(
-        #     dir_samples=args.data_dir,
-        #     sample_file=args.subset_samples,
-        #     project_name=args.campaign_name,
-        #     pattern=args.pattern
-
-        # )
-        sample_table = build_sample_table_2(
+        sample_table = build_sample_table(
             dir_samples=args.data_dir,
             sample_file=args.subset_samples,
             project_name=args.campaign_name,
@@ -124,7 +117,7 @@ def subset(
     return samples
 
 
-def build_sample_table_2(dir_samples: str, sample_file: str, project_name: str, pattern: str) -> str: 
+def build_sample_table(dir_samples: str, sample_file: str, project_name: str, pattern: str) -> str: 
 
     if not pattern.startswith('*'):
         search_pattern = f"**/*{pattern}"
