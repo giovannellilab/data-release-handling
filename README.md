@@ -49,7 +49,7 @@ options:
 The following script uploads forward and reverse files for each sample declared in a sample_table_{campaign}.tsv file (The likes of geomosaic ).
 Either, pass a sample_table.tsv file such as:
 
-| forward                    | reverse                     | sample_alias |
+| r1                         | r2                          | sample       |
 | ---------------------------|-----------------------------|--------------|
 | AC_280625_F_RBKMV.fastq.gz | AC_280625_F_RBKTMV.fastq.gz | AC_280625_F  |
 | BC_200625_S_RBKMV.fastq.gz | BC_200625_S_RBKTMV.fastq.gz | BC_200625_S  |

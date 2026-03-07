@@ -36,14 +36,20 @@ def main():
         
         print(f'Creating sample table from dir: {args.data_dir}')
 
-        sample_table = build_sample_table(
+        # sample_table = build_sample_table(
+        #     dir_samples=args.data_dir,
+        #     sample_file=args.subset_samples,
+        #     project_name=args.campaign_name,
+        #     pattern=args.pattern
+
+        # )
+        sample_table = build_sample_table_2(
             dir_samples=args.data_dir,
             sample_file=args.subset_samples,
             project_name=args.campaign_name,
             pattern=args.pattern
 
         )
-
     ibisco_uploader(
         sample_table=sample_table,
         dir_samples=args.data_dir,
@@ -118,75 +124,67 @@ def subset(
     return samples
 
 
+def build_sample_table_2(dir_samples: str, sample_file: str, project_name: str, pattern: str) -> str: 
 
-def build_sample_table(
-    dir_samples:str,
-    sample_file:str,
-    project_name:str,
-    pattern:str
-    )->str: 
-
-    #pattern_to_sample = os.path.join(dir_samples,sample_pattern)
-
-    if sample_file:
-        samples = subset(
-            sample_file=sample_file
-                        )
-        all_samples = [glob.glob(os.path.join(f'{dir_samples}/{file}')) for file in samples]
-
+    if not pattern.startswith('*'):
+        search_pattern = f"**/*{pattern}"
     else:
-        all_dir_samples = os.path.join(f'{dir_samples}/**/')
-        all_samples = [dire for dire in glob.glob(all_dir_samples)]
+        search_pattern = f"**/{pattern}"
 
+    print(f"Searching for: {search_pattern} in {dir_samples}")
 
+    all_files_path = glob.glob(os.path.join(dir_samples, search_pattern), recursive=True)
+    all_files_path = [f for f in all_files_path if os.path.isfile(f)]
 
-    FILES = []
+    if not all_files_path:
+        print(f"ERROR: No files found matching {pattern} in {dir_samples}")
+        sys.exit(1)
+
+    # 3. Group files by Sample Name
+    samples_dict = {}
+
+    for f_path in sorted(all_files_path):
+
+        fname = os.path.basename(f_path)
+                parts = fname.split('_')
+        if len(parts) < 2:
+            continue
+            
+        # Example: HTB_S21 (from HTB_S21_R1)
+        sample_id = "_".join(parts[:-1])
+        # Example: R1.fastq.gz
+        suffix = parts[-1]
+
+        if sample_id not in samples_dict:
+            samples_dict[sample_id] = {'r1': None, 'r2': None}
+
+        if 'R1' in suffix:
+            samples_dict[sample_id]['r1'] = fname
+        elif 'R2' in suffix:
+            samples_dict[sample_id]['r2'] = fname
+        else:
+            print(f"WARNING: File {fname} does not match expected R1/R2 pattern at the end, skipping.")
+            continue
+
     all_rows = []
-    ## WGs file extension
-    for sample_dir in sorted(all_samples):
-
-        #collecting all files matching dirs and pattern
-        files_path = os.path.join(sample_dir,pattern)
-        all_files = glob.glob(files_path)
-
-        #extracting sample/file path
-        relative_files_path = [ "/".join(file.split('/')[-2:]) for file in all_files ]
-        FILES.extend(relative_files_path)
-
-        # extracting file names
-        files_names = [ file_p.split('/')[-1] for file_p in all_files ]
-
-        for file in files_names:
-            #suffix could be changed
-            suffix = file.split('_')[-1][0]
-            # if sample_name is cannonical G100; jsut splice with [0]
-            sample_name = "_".join(file.split('_')[:3])
-            #sample_name = file.split('_')[0]
-
-            if suffix == '1':
-                file_forward = file
-            if suffix == '2':
-                file_reverse = file
-
-        row = pd.Series({
-                'r1' : file_forward ,
-                'r2' : file_reverse ,
-                'sample' : sample_name
-        }).to_frame().T
+    for s_id, reads in samples_dict.items():
+        row = pd.DataFrame([{
+            'r1': reads['r1'],
+            'r2': reads['r2'],
+            'sample': s_id
+        }])
         all_rows.append(row)
 
-    frame = pd.concat(all_rows)
+    frame = pd.concat(all_rows, ignore_index=True)
+    print("\nGenerated Sample Table:")
     print(frame)
 
-    # # saving sample table file
-
     file_name_table = f'sample_table_{project_name}.tsv'
-    sample_table_file = os.path.join(dir_samples,file_name_table)
-
-    frame.to_csv(sample_table_file, sep = '\t', encoding='utf-8', index=False)
+    sample_table_file = os.path.join(dir_samples, file_name_table)
+    frame.to_csv(sample_table_file, sep='\t', index=False)
     print(f'STEP[2] SAVING File {file_name_table} to: {dir_samples}')
 
-
+    
     return sample_table_file
 
 
