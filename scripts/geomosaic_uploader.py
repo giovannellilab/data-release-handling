@@ -5,6 +5,8 @@ import glob
 import argparse
 import subprocess
 import sys
+import re
+from pathlib import Path
 
 ### AUTHOR: EDOARDO TACCALITI ###
 
@@ -25,6 +27,7 @@ def main():
     if args.sample_table:
 
         sample_table = args.sample_table
+
         if os.path.exists(sample_table):
             print(f'Provided sample table: {os.path.basename(sample_table)} exists')
             df = pd.read_csv(sample_table, sep='	')
@@ -97,88 +100,63 @@ def parse_args():
     return parser.parse_args()
 
 
-def subset(
-        sample_file:str,
-)-> list:
-    """
-    Select samples specified in a text file
-    Args:
-        textfile (str): sample x row.
-    Returns:
-        list: samples
-    """
-    samples = []
-
-    with open(sample_file,'r')as reader:
-        for line in reader:
-            sample = line.strip()
-            samples.append(sample)
-    
-    return samples
-
 
 def build_sample_table(dir_samples: str, sample_file: str, project_name: str, pattern: str) -> str: 
 
-    if not pattern.startswith('*'):
-        search_pattern = f"**/*{pattern}"
+    raw_input = pattern[0] if isinstance(pattern, list) else pattern
+    if not raw_input.startswith('*'):
+        search_pattern = f"**/*{raw_input}"
     else:
-        search_pattern = f"**/{pattern}"
+        search_pattern = f"**/{raw_input}"
 
-    print(f"Searching for: {search_pattern} in {dir_samples}")
+    print(f"--- Searching recursively for: {search_pattern} ---")
 
-    all_files_path = glob.glob(os.path.join(dir_samples, search_pattern), recursive=True)
-    all_files_path = [f for f in all_files_path if os.path.isfile(f)]
+    base_path = Path(dir_samples)
+    all_files = [f for f in base_path.glob(search_pattern) if f.is_file() and "sample_table" not in f.name]
 
-    if not all_files_path:
-        print(f"ERROR: No files found matching {pattern} in {dir_samples}")
+    if not all_files:
+        print(f"ERROR: No files found in {dir_samples} matching {search_pattern}")
         sys.exit(1)
 
-    # 3. Group files by Sample Name
     samples_dict = {}
+    
+    # Common patterns for R1 and R2
+    # This covers _R1, _1, .1, _R1_001, etc.
+    r1_regex = re.compile(r'(_R1(_001)?|(?<![a-zA-Z])1)(\.fastq|\.fq)(\.gz)?$', re.IGNORECASE)
+    r2_regex = re.compile(r'(_R2(_001)?|(?<![a-zA-Z])2)(\.fastq|\.fq)(\.gz)?$', re.IGNORECASE)
 
-    for f_path in sorted(all_files_path):
-
-        fname = os.path.basename(f_path)
-                parts = fname.split('_')
-        if len(parts) < 2:
-            continue
-            
-        # Example: HTB_S21 (from HTB_S21_R1)
-        sample_id = "_".join(parts[:-1])
-        # Example: R1.fastq.gz
-        suffix = parts[-1]
+    for f_path in sorted(all_files):
+        fname = f_path.name
+        
+        if r1_regex.search(fname):
+            sample_id = r1_regex.sub('', fname)
+            direction = 'r1'
+        elif r2_regex.search(fname):
+            sample_id = r2_regex.sub('', fname)
+            direction = 'r2'
+        else:
+            # Fallback for unpaired or weirdly named files
+            sample_id = fname.split('.')[0]
+            direction = 'r1' 
 
         if sample_id not in samples_dict:
             samples_dict[sample_id] = {'r1': None, 'r2': None}
+        
+        samples_dict[sample_id][direction] = fname
 
-        if 'R1' in suffix:
-            samples_dict[sample_id]['r1'] = fname
-        elif 'R2' in suffix:
-            samples_dict[sample_id]['r2'] = fname
-        else:
-            print(f"WARNING: File {fname} does not match expected R1/R2 pattern at the end, skipping.")
-            continue
-
-    all_rows = []
+    rows = []
     for s_id, reads in samples_dict.items():
-        row = pd.DataFrame([{
-            'r1': reads['r1'],
-            'r2': reads['r2'],
-            'sample': s_id
-        }])
-        all_rows.append(row)
-
-    frame = pd.concat(all_rows, ignore_index=True)
-    print("\nGenerated Sample Table:")
-    print(frame)
-
-    file_name_table = f'sample_table_{project_name}.tsv'
-    sample_table_file = os.path.join(dir_samples, file_name_table)
-    frame.to_csv(sample_table_file, sep='\t', index=False)
-    print(f'STEP[2] SAVING File {file_name_table} to: {dir_samples}')
-
+        rows.append({'r1': reads['r1'], 'r2': reads['r2'], 'sample': s_id})
     
-    return sample_table_file
+    df = pd.DataFrame(rows).sort_values('sample')
+    
+    output_path = base_path / f'sample_table_{project_name}.tsv'
+    df.to_csv(output_path, sep='\t', index=False)
+    
+    print("\n--- Generated Sample Table ---")
+    print(df.to_string(index=False))
+    
+    return str(output_path)
 
 
 
