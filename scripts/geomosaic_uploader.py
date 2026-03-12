@@ -59,12 +59,12 @@ def parse_args():
     parser = argparse.ArgumentParser("Upload raw seqs AND sample_table.tsv to IBISCO server")
     parser.add_argument(
         "-d", "--data_dir",
-        help="directory storing sample sequences",
+        help="Provide directory ABSOLUTE path storing sample sequences",
         default=str
     )
     parser.add_argument(
         "-t", "--sample_table",
-        help="provides geomosaic sample table",
+        help="Provide geomosaic ABSOLUTE path to sample table",
         type=str,
         default=None
     )
@@ -103,27 +103,27 @@ def parse_args():
 
 def build_sample_table(dir_samples: str, sample_file: str, project_name: str, pattern: str) -> str: 
 
+    base_path = Path(dir_samples).resolve()
+
+    if not base_path.is_dir():
+        sys.exit(f"ERROR: Directory '{base_path}' does not exist or is not a directory.")
+
     raw_input = pattern[0] if isinstance(pattern, list) else pattern
-    if not raw_input.startswith('*'):
-        search_pattern = f"**/*{raw_input}"
-    else:
-        search_pattern = f"**/{raw_input}"
+    search_pattern = f"**/{raw_input.lstrip('*')}" if not raw_input.startswith('**/') else raw_input
 
-    print(f"--- Searching recursively for: {search_pattern} ---")
+    print(f"--- Searching recursively in {base_path} for: {search_pattern} ---")
 
-    base_path = Path(dir_samples)
     all_files = [f for f in base_path.glob(search_pattern) if f.is_file() and "sample_table" not in f.name]
 
     if not all_files:
-        print(f"ERROR: No files found in {dir_samples} matching {search_pattern}")
-        sys.exit(1)
+        sys.exit(f"ERROR: No files found in {base_path} matching {search_pattern}")
 
     samples_dict = {}
     
     # Common patterns for R1 and R2
     # This covers _R1, _1, .1, _R1_001, etc.
-    r1_regex = re.compile(r'(_R1(_001)?|(?<![a-zA-Z])1)(\.fastq|\.fq)(\.gz)?$', re.IGNORECASE)
-    r2_regex = re.compile(r'(_R2(_001)?|(?<![a-zA-Z])2)(\.fastq|\.fq)(\.gz)?$', re.IGNORECASE)
+    r1_regex = re.compile(r'(_R1(_\d+)?|_1)(?=\.fastq|\.fq)(\.fastq|\.fq)(\.gz)?$', re.IGNORECASE)
+    r2_regex = re.compile(r'(_R2(_\d+)?|_2)(?=\.fastq|\.fq)(\.fastq|\.fq)(\.gz)?$', re.IGNORECASE)
 
     for f_path in sorted(all_files):
         fname = f_path.name
@@ -170,9 +170,11 @@ def ibisco_uploader(
     # # this function upload files tored in the sample_table to our SERVER # #
     # # the files are copied in the assgined 'final_dir' # #
     sample_df = pd.read_csv(sample_table, sep = '\t')
-    if not os.path.isdir(dir_samples):
-        print(f'Path not valid: {dir_samples}')
-        sys.exi(1)
+    
+    base_path = Path(dir_samples).resolve()
+
+    if not base_path.is_dir():
+        sys.exit(f"ERROR: Directory '{base_path}' does not exist or is not a directory.")
 
     list_all_paths = []
     for row in sample_df.itertuples():
