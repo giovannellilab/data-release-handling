@@ -41,7 +41,6 @@ def main():
 
         sample_table = build_sample_table(
             dir_samples=args.data_dir,
-            sample_file=args.subset_samples,
             project_name=args.campaign_name
 
         )
@@ -88,7 +87,7 @@ def parse_args():
 
 
 
-def build_sample_table(dir_samples: str, sample_file: str, project_name: str) -> str: 
+def build_sample_table(dir_samples: str, project_name: str) -> str: 
 
     base_path = Path(dir_samples).resolve()
 
@@ -100,9 +99,7 @@ def build_sample_table(dir_samples: str, sample_file: str, project_name: str) ->
 
     all_files = [
         f for f in base_path.rglob("*")
-        if f.is_file()
-        and "sample_table" not in f.name
-        and regex_pattern.search(f.name)
+        if f.is_file() and regex_pattern.search(f.name)
     ]
 
     print(f"--- Searching recursively in {base_path} for: {pattern} ---")
