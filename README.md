@@ -72,10 +72,6 @@ options:
                         provides geomosaic sample table
   -c, --campaign_name CAMPAIGN_NAME
                         Provide campaign name: Ex ARG23 or TEST
-  -p, --pattern PATTERN
-                        Sequence pattern to search, default: *fq.gz
-  -s, --subset_samples SUBSET_SAMPLES
-                        provide a text file with each line a sample
   -u, --ibisco_user IBISCO_USER
                         Provide user account
   -z, --dry_run         Will attempt a dry run without uploading files

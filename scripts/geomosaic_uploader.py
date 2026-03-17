@@ -26,12 +26,12 @@ def main():
 
     if args.sample_table:
 
-        sample_table = args.sample_table
+        sample_table_file = args.sample_table
 
-        if os.path.exists(sample_table):
-            print(f'Provided sample table: {os.path.basename(sample_table)} exists')
-            df = pd.read_csv(sample_table, sep='	')
-            print(df)
+        if os.path.exists(sample_table_file):
+            print(f'Provided sample table: {os.path.basename(sample_table_file)} exists')
+            sample_table = table_checks(sample_table_file)
+            print(sample_table)
         else:
             print(f'Provided sample table or path: {sample_table} does NOT exists')
 
@@ -42,8 +42,7 @@ def main():
         sample_table = build_sample_table(
             dir_samples=args.data_dir,
             sample_file=args.subset_samples,
-            project_name=args.campaign_name,
-            pattern=args.pattern
+            project_name=args.campaign_name
 
         )
     ibisco_uploader(
@@ -74,18 +73,6 @@ def parse_args():
         type=str
     )
     parser.add_argument(
-        "-p", "--pattern",
-        help="Sequence pattern to search, default: *fq.gz",
-        type=str,
-        default='*fq.gz'
-    )
-    parser.add_argument(
-        "-s", "--subset_samples",
-        help="provide a text file with each line a sample",
-        type=str,
-        default=None
-    )
-    parser.add_argument(
         "-u", "--ibisco_user",
         help="Provide user account",
         type=str,
@@ -101,22 +88,27 @@ def parse_args():
 
 
 
-def build_sample_table(dir_samples: str, sample_file: str, project_name: str, pattern: str) -> str: 
+def build_sample_table(dir_samples: str, sample_file: str, project_name: str) -> str: 
 
     base_path = Path(dir_samples).resolve()
 
     if not base_path.is_dir():
         sys.exit(f"ERROR: Directory '{base_path}' does not exist or is not a directory.")
 
-    raw_input = pattern[0] if isinstance(pattern, list) else pattern
-    search_pattern = f"**/{raw_input.lstrip('*')}" if not raw_input.startswith('**/') else raw_input
+    pattern = r'(\.fastq|\.fq)(\.gz)?$'
+    regex_pattern = re.compile(pattern, re.IGNORECASE)
 
-    print(f"--- Searching recursively in {base_path} for: {search_pattern} ---")
+    all_files = [
+        f for f in base_path.rglob("*")
+        if f.is_file()
+        and "sample_table" not in f.name
+        and regex_pattern.search(f.name)
+    ]
 
-    all_files = [f for f in base_path.glob(search_pattern) if f.is_file() and "sample_table" not in f.name]
+    print(f"--- Searching recursively in {base_path} for: {pattern} ---")
 
     if not all_files:
-        sys.exit(f"ERROR: No files found in {base_path} matching {search_pattern}")
+        sys.exit(f"ERROR: No files found in {base_path} matching {pattern}")
 
     samples_dict = {}
     
@@ -158,6 +150,25 @@ def build_sample_table(dir_samples: str, sample_file: str, project_name: str, pa
     
     return str(output_path)
 
+
+def table_checks(filename):
+
+    _, extension = os.path.splitext(filename)
+    file_format = extension.lower().replace(".", "")
+    print(f'{file_format}')
+
+    if file_format == "tsv":
+        rawdf = pd.read_csv(filename, sep="\t")
+    elif file_format == "csv":
+        rawdf = pd.read_csv(filename, sep=",")
+    else:
+        rawdf = pd.read_excel(filename)
+    
+    assert "r1" in list(rawdf.columns), f"\n\n ERROR in Column 'r1' not present in the provided table. It should contains three columns, with the following header (all lower-case): r1 r2 sample"
+    assert "r2" in list(rawdf.columns), f"\n\n ERROR in Column 'r2' not present in the provided table. It  contains three columns, with the following header (all lower-case): r1 r2 sample"
+    assert "sample" in list(rawdf.columns), f"\n\n ERROR in Column 'sample' not present in the provided table. It should contains three columns, with the following header (all lower-case): r1 r2 sample"
+
+    return filename
 
 
 def ibisco_uploader(
@@ -205,7 +216,7 @@ def ibisco_uploader(
     pre_command = ['ssh', user_server, 'mkdir', '-p', remote_path]
 
     if dry_run:
-        print('NOT uploadnig -> dry-run activated \n Samples table built')
+        print('NOT uploadnig -> dry-run activated')
         command = [
                     'rsync',
                     '--dry-run',
@@ -217,6 +228,7 @@ def ibisco_uploader(
                     remote_host
                     ]
     else:
+        print('Uploading Data..')
         command = [
                     'rsync', 
                     '-av', 
