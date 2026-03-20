@@ -48,7 +48,8 @@ def main():
         sample_table=sample_table,
         dir_samples=args.data_dir,
         project_name=args.campaign_name,
-        user_name=args.ibisco_user,
+        remote_host=args.remote_host,
+        remote_path=args.remote_path,
         dry_run=args.dry_run
     )
 
