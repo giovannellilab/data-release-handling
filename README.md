@@ -62,19 +62,25 @@ Run the following command, substituting with the right paths and flags:
 ```bash
 
 python scripts/geomosaic_uploader.py -h
-usage: Upload raw seqs AND sample_table.tsv to IBISCO server [-h] [-d DATA_DIR] [-t SAMPLE_TABLE] [-c CAMPAIGN_NAME] [-p PATTERN] [-s SUBSET_SAMPLES] [-u IBISCO_USER] [-z]
+
+usage: Upload raw seqs AND sample_table.tsv to a remote server [-h] [-d DATA_DIR] [-t SAMPLE_TABLE] [-c CAMPAIGN_NAME] [-p PATTERN] [-s SUBSET_SAMPLES] [-u IBISCO_USER] [-z]
 
 options:
   -h, --help            show this help message and exit
-  -d, --data_dir DATA_DIR
-                        directory storing sample sequences
-  -t, --sample_table SAMPLE_TABLE
-                        provides geomosaic sample table
-  -c, --campaign_name CAMPAIGN_NAME
+  -d DATA_DIR, --data_dir DATA_DIR
+                        Provide directory ABSOLUTE path storing sample sequences
+  -t SAMPLE_TABLE, --sample_table SAMPLE_TABLE
+                        Provide geomosaic ABSOLUTE path to sample table
+  -H REMOTE_HOST, --remote_host REMOTE_HOST
+                        Provide remote server hostname or IP (e.g. dgiovannelli@ibiscohpc-ui.scope.unina.it)
+  -p REMOTE_PATH, --remote_path REMOTE_PATH
+                        Provide absolute remote path on the server (e.g. /ibiscostorage/GiovannelliLab/raw)
+  -c CAMPAIGN_NAME, --campaign_name CAMPAIGN_NAME
                         Provide campaign name: Ex ARG23 or TEST
-  -u, --ibisco_user IBISCO_USER
-                        Provide user account
   -z, --dry_run         Will attempt a dry run without uploading files
+```
+Example:
+```bash
 
 ```
 

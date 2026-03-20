@@ -69,7 +69,7 @@ def parse_args():
     )
     parser.add_argument(
         "-H", "--remote_host",
-        help="Provide remote server hostname or IP (e.g. dgiovannelli@ibiscohpc-ui.scope.unina.it)",
+        help="Provide user & remote server hostname or IP (e.g. dgiovannelli@ibiscohpc-ui.scope.unina.it)",
         type=str,
         default='ibisco',
         required=True
