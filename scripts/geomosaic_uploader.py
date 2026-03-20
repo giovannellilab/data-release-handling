@@ -67,15 +67,22 @@ def parse_args():
         default=None
     )
     parser.add_argument(
+        "-H", "--remote_host",
+        help="Provide remote server hostname or IP (e.g. dgiovannelli@ibiscohpc-ui.scope.unina.it)",
+        type=str,
+        default='ibisco',
+        required=True
+    )
+    parser.add_argument(
+        "-p", "--remote_path",
+        help="Provide absolute remote path on the server (e.g. /ibiscostorage/GiovannelliLab/raw)",
+        type=str,
+        required=True
+    )
+    parser.add_argument(
         "-c", "--campaign_name",
         help="Provide campaign name: Ex ARG23 or TEST",
         type=str
-    )
-    parser.add_argument(
-        "-u", "--ibisco_user",
-        help="Provide user account",
-        type=str,
-        default='dgiovannelli'
     )
     parser.add_argument(
         "-z","--dry_run",
@@ -172,7 +179,8 @@ def ibisco_uploader(
     sample_table: str,
     dir_samples: str,
     project_name: str,
-    user_name: str,
+    remote_host: str,
+    remote_path: str,
     dry_run: bool = False  # default, used if not overridden
     ):
     # # this function upload files tored in the sample_table to our SERVER # #
@@ -200,17 +208,13 @@ def ibisco_uploader(
     list_all_paths.extend([sample_table])
     files_payload = "\n".join(list_all_paths)
     
-    HOST_name = 'ibiscohpc-ui.scope.unina.it'
-    user_server = '@'.join([user_name,HOST_name])
+    #HOST_name = 'ibiscohpc-ui.scope.unina.it'
+    #user_server = '@'.join([user_name,HOST_name])
 
-    if user_name == 'dgiovannelli':
-        remote_path = f'/ibiscostorage/GiovannelliLab/raw/{project_name}'
-    else:
-        remote_path = f'/ibiscostorage/{user_name}/raw/{project_name}'
+    full_remote_path = f'{remote_path}/{project_name}'
+    full_remote_host = f'{remote_host}:{full_remote_path}'
 
-    remote_host = f'{user_server}:{remote_path}'
-    
-    pre_command = ['ssh', user_server, 'mkdir', '-p', remote_path]
+    pre_command = ['ssh', remote_host, 'mkdir', '-p', full_remote_path]
 
     if dry_run:
         print('NOT uploadnig -> dry-run activated')
@@ -222,7 +226,7 @@ def ibisco_uploader(
                     '--no-relative',
                     '--files-from=-',
                     '/',
-                    remote_host
+                    
                     ]
     else:
         print('Uploading Data..')
@@ -233,7 +237,7 @@ def ibisco_uploader(
                     '--no-relative',
                     '--files-from=-',
                     '/', 
-                    remote_host
+                    full_remote_host
                     ]
     try:
         if dry_run:
