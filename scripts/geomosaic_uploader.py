@@ -31,14 +31,12 @@ def main():
         if os.path.exists(sample_table_file):
             print(f'Provided sample table: {os.path.basename(sample_table_file)} exists')
             sample_table = table_checks(sample_table_file)
-            print(sample_table)
         else:
             print(f'Provided sample table or path: {sample_table} does NOT exists')
 
     else:
         
         print(f'Creating sample table from dir: {args.data_dir}')
-
         sample_table = build_sample_table(
             dir_samples=args.data_dir,
             project_name=args.campaign_name
@@ -82,8 +80,9 @@ def parse_args():
     )
     parser.add_argument(
         "-c", "--campaign_name",
-        help="Provide campaign name: Ex ARG23 or TEST",
-        type=str
+        help="Provide output folder name to store files in remote: Ex ARG23 or TEST",
+        type=str,
+        required=True
     )
     parser.add_argument(
         "-z","--dry_run",
@@ -150,7 +149,7 @@ def build_sample_table(dir_samples: str, project_name: str) -> str:
     output_path = base_path / f'sample_table_{project_name}.tsv'
     df.to_csv(output_path, sep='\t', index=False)
     
-    print("\n--- Generated Sample Table ---")
+    print("\n--- Generated Sample Table ---\n")
     print(df.to_string(index=False))
     
     return str(output_path)
@@ -160,7 +159,6 @@ def table_checks(filename):
 
     _, extension = os.path.splitext(filename)
     file_format = extension.lower().replace(".", "")
-    print(f'{file_format}')
 
     if file_format == "tsv":
         rawdf = pd.read_csv(filename, sep="\t")
@@ -172,6 +170,8 @@ def table_checks(filename):
     assert "r1" in list(rawdf.columns), f"\n\n ERROR in Column 'r1' not present in the provided table. It should contains three columns, with the following header (all lower-case): r1 r2 sample"
     assert "r2" in list(rawdf.columns), f"\n\n ERROR in Column 'r2' not present in the provided table. It  contains three columns, with the following header (all lower-case): r1 r2 sample"
     assert "sample" in list(rawdf.columns), f"\n\n ERROR in Column 'sample' not present in the provided table. It should contains three columns, with the following header (all lower-case): r1 r2 sample"
+    
+    print('\n',rawdf.to_string(index=False),'\n')
 
     return filename
 
@@ -227,10 +227,9 @@ def ibisco_uploader(
                     '--no-relative',
                     '--files-from=-',
                     '/',
-                    
+                    full_remote_host
                     ]
     else:
-        print('Uploading Data..')
         command = [
                     'rsync', 
                     '-av', 
@@ -242,10 +241,13 @@ def ibisco_uploader(
                     ]
     try:
         if dry_run:
+            print(f'Data will be uploaded to: {full_remote_host}')
             subprocess.run(pre_command, check=True)
             subprocess.run(command, input=files_payload, text=True, check=True)
+            print(f'\n STEP[3] Attempted Dry-run to: {remote_host}')
+
         else:
-            print(f'Data will be uploaded to: {remote_host}')
+            print(f'Data is being uploaded to: {full_remote_host}')
             subprocess.run(pre_command, check=True)
             subprocess.run(command, input=files_payload, text=True, check=True)
             print(f'\n STEP[3] Files uploaded to: {remote_host}')
