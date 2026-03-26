@@ -1,6 +1,9 @@
 
 
-This repository cotains three scripts for easing common practices in day-t-day routine. Uploading of raw readds to a server to be ready for GEOMOSAIC setup, collection and gathering of basic statistics regarding results obtained after running geomosaic and distribution of newly released sequences from a common folder based on our sample_database.
+This repository cotains 3 scripts for easing common practices in day-t-day routine:
+- Uploading of raw reads to a server for GEOMOSAIC setup ```geomosaic_uploader.py```, 
+- collection and gathering of basic statistics results obtained after running geomosaic,  ```geomosaic_statistics.py```
+- distribution of newly released sequences from a common folder based on our sample_database.
 
 
 ### CREATE CONDA ENV
@@ -70,7 +73,7 @@ options:
   -d DATA_DIR, --data_dir DATA_DIR
                         Provide directory ABSOLUTE path storing sample sequences
   -t SAMPLE_TABLE, --sample_table SAMPLE_TABLE
-                        Provide geomosaic ABSOLUTE path to sample table
+                        Provide geomosaic ABSOLUTE path to sample table if available
   -H REMOTE_HOST, --remote_host REMOTE_HOST
                         Provide remote server hostname or IP (e.g. dgiovannelli@ibiscohpc-ui.scope.unina.it)
   -p REMOTE_PATH, --remote_path REMOTE_PATH
@@ -81,6 +84,8 @@ options:
 ```
 Example:
 ```bash
+python scripts/geomosaic_uploader.py -d /home/edotacca/working_dir/geomosaic_test/raw/smokingland_core/ -H fmi-ibisco -p /ibiscostorage/fmigliacc
+io/raw/
 
 ```
 
