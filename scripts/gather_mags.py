@@ -217,7 +217,6 @@ def main():
         combined_df_mags = pd.concat(all_dataframes_mags, ignore_index=True)
         combined_df_mags.to_csv(main_file_out_mags, sep='\t', index=False)
         
-        return combined_df_mags, main_file_out_mags
     # gathering prodigal data for the MAGs
     for s in tqdm(samples, desc="Processing MAGs prodigal"):
         df = collect_mags_prodigal(s, 'mags_prodigal', args.working_dir, args.output_dir)
@@ -227,10 +226,7 @@ def main():
     if all_dataframes_mags_prodigal:
         combined_df_mags_prodigal = pd.concat(all_dataframes_mags_prodigal, ignore_index=True)
         combined_df_mags_prodigal.to_csv(main_file_out_mags_prodigal, sep='\t', index=False)
-        
-        return combined_df_mags_prodigal, main_file_out_mags_prodigal
 
-    return None, main_file_out_mags_prodigal
 
 
 def parse_args():
