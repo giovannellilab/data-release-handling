@@ -39,17 +39,18 @@ def copy_rename_mag(mag_file, output_dir, sample_id, glab_signature):
         mag_name = os.path.dirname(mag_file).split('/')[-1]
         extension = os.path.basename(mag_file).split('.')[1] 
 
-    new_mag_name = f"{sample_id}_{glab_signature}_{mag_name}.{extension}"
-    
+    new_mag_file = f"{sample_id}_{glab_signature}_{mag_name}.{extension}"
+    new_mag_name = new_mag_file.split('.')[0]
+
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    if not os.path.exists(os.path.join(output_dir, new_mag_name)):
-        shutil.copy(mag_file, os.path.join(output_dir, new_mag_name))
+    if not os.path.exists(os.path.join(output_dir, new_mag_file)):
+        shutil.copy(mag_file, os.path.join(output_dir, new_mag_file))
     else:
-        tqdm.write(f"File {new_mag_name} already exists in {output_dir}. Skipping copy.")
+        tqdm.write(f"File {new_mag_file} already exists in {output_dir}. Skipping copy.")
     
-    return mag_name
+    return new_mag_name
 
 
 def collect_mags(s, pckg, working_dir, output_dir):
