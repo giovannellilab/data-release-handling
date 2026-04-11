@@ -33,9 +33,10 @@ def copy_rename_mag(mag_file, output_dir, sample_id, glab_signature):
     
     if mag_file.endswith('.fa'):
         mag_name = os.path.basename(mag_file).split('.')[0]
-        extension = os.path.basename(mag_file).split('.')[1] 
+        extension = os.path.basename(mag_file).split('.')[1]
+
     elif mag_file.endswith('.faa'):
-        mag_name = os.path.dirname(mag_file)  
+        mag_name = os.path.dirname(mag_file).split('/')[-1]
         extension = os.path.basename(mag_file).split('.')[1] 
 
     new_mag_name = f"{sample_id}_{glab_signature}_{mag_name}.{extension}"
@@ -151,8 +152,7 @@ def collect_mags_prodigal(s, pckg, working_dir, output_dir):
 
     for mag in mags:
 
-        n_proteins = 0
-        total_protein_length = 0
+        n_proteins, total_protein_length = 0, 0
 
         faa_file = os.path.join(pckg_dir, mag, 'orf_predicted.faa')
         if not os.path.exists(faa_file):
