@@ -31,8 +31,12 @@ def get_samples(geo_samples:str)->list:
 
 def copy_rename_mag(mag_file, output_dir, sample_id, glab_signature):
     
-    mag_name = os.path.basename(mag_file).split('.')[0]  # Get the base name without extension
-    extension = os.path.basename(mag_file).split('.')[1]  # Get the extension
+    if mag_file.endswith('.fa'):
+        mag_name = os.path.basename(mag_file).split('.')[0]
+        extension = os.path.basename(mag_file).split('.')[1] 
+    elif mag_file.endswith('.faa'):
+        mag_name = os.path.dirname(mag_file)  
+        extension = os.path.basename(mag_file).split('.')[1] 
 
     new_mag_name = f"{sample_id}_{glab_signature}_{mag_name}.{extension}"
     
@@ -158,9 +162,8 @@ def collect_mags_prodigal(s, pckg, working_dir, output_dir):
         for record in SeqIO.parse(faa_file, 'fasta'):
             n_proteins += 1
             total_protein_length += len(record.seq)
-        mag_file = os.path.dirname(faa_file)
 
-        glab_mag_faa = copy_rename_mag(mag_file, output_dir=output_dir, sample_id=s, glab_signature='GlabCoEvo')
+        glab_mag_faa = copy_rename_mag(faa_file, output_dir=output_dir, sample_id=s, glab_signature='GlabCoEvo')
 
         mag_row = df_checkm[df_checkm['MAGs'] == mag]
         complet = mag_row['Completeness'].values[0]
