@@ -13,10 +13,21 @@ from tqdm import tqdm
 from contextlib import redirect_stdout
 import json
 # import from my previous script 
-from geomosaic_statistics import get_samples, average
+from geomosaic_statistics import average
 
 # This script is used to gather the MAGs from the different campaigns and put them in a single folder, with a single metadata file.
 # The script also checks for the presence of the MAGs and their completeness and contamination, and filters them based on the provided thresholds.
+def get_samples(geo_samples:str)->list:
+    
+    if os.path.exists(geo_samples):
+
+        with open(geo_samples,'r') as reader:
+            samples = [line.strip() for line in reader]
+            return samples
+    else:
+        print(f'No files named: {geo_samples} found')
+        return []
+
 
 def copy_rename_mag(mag_file, suffix, output_dir, sample_id, glab_signature):
     
@@ -186,6 +197,7 @@ def main():
     args = parse_args()
 
     samples = get_samples(args.samples)
+    
     os.makedirs(args.output_dir, exist_ok=True)
 
     main_file_out_mags = os.path.join(args.output_dir, f'{args.campaigns}_MAGs.tsv')
