@@ -53,7 +53,7 @@ def copy_rename_mag(mag_file, output_dir, sample_id, glab_signature):
     return new_mag_name
 
 
-def collect_mags(s, pckg, working_dir, output_dir):
+def collect_mags(s, pckg, working_dir, output_dir, campaign):
     """
     Collect MAG data for a single sample.
     Returns a DataFrame or None if the sample should be skipped.
@@ -104,6 +104,7 @@ def collect_mags(s, pckg, working_dir, output_dir):
             'GLab_mag': glab_mag,
             'MAGs': mag,
             'sample': s,
+            'campaign': campaign,
 
             'binID': mag_row['binID'].values[0],
             'Marker lineage': mag_row['Marker lineage'].values[0],
@@ -126,7 +127,7 @@ def collect_mags(s, pckg, working_dir, output_dir):
 
     return df_samples_mags  
 
-def collect_mags_prodigal(s, pckg, working_dir, output_dir):
+def collect_mags_prodigal(s, pckg, working_dir, output_dir, campaign):
     """
     Collect Prodigal ORF prediction data for a single sample.
     Copies and renames orf_predicted.faa for each MAG, parses protein stats,
@@ -174,6 +175,7 @@ def collect_mags_prodigal(s, pckg, working_dir, output_dir):
             'GLab_faa': glab_mag_faa,
             'MAGs': mag,
             'sample': s,
+            'campaign': campaign,
 
             'binID': mag_row['binID'].values[0],
             'Marker lineage': mag_row['Marker lineage'].values[0],
@@ -213,7 +215,7 @@ def main():
 
     # gathering checkm data for the MAGs
     for s in tqdm(samples, desc="Processing MAGs"):
-        df_mag = collect_mags(s, 'mags', args.working_dir, args.output_dir)
+        df_mag = collect_mags(s, 'mags', args.working_dir, args.output_dir, args.campaigns)
         if df_mag is not None:
             all_dataframes_mags.append(df_mag)
 
@@ -223,7 +225,7 @@ def main():
         
     # gathering prodigal data for the MAGs
     for s in tqdm(samples, desc="Processing MAGs prodigal"):
-        df = collect_mags_prodigal(s, 'mags_prodigal', args.working_dir, args.output_dir)
+        df = collect_mags_prodigal(s, 'mags_prodigal', args.working_dir, args.output_dir, args.campaigns)
         if df is not None:
             all_dataframes_mags_prodigal.append(df)
 
