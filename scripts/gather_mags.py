@@ -44,7 +44,7 @@ def copy_rename_mag(mag_file, output_dir, sample_id, glab_signature):
     else:
         tqdm.write(f"File {new_mag_name} already exists in {output_dir}. Skipping copy.")
     
-    return new_mag_name
+    return mag_name
 
 
 def collect_mags(s, pckg, working_dir, output_dir):
@@ -97,9 +97,9 @@ def collect_mags(s, pckg, working_dir, output_dir):
         row = {
             'GLab_mag': glab_mag,
             'MAGs': mag,
-            'binID': mag_row['binID'].values[0],
             'sample': s,
 
+            'binID': mag_row['binID'].values[0],
             'Marker lineage': mag_row['Marker lineage'].values[0],
             'n_genomes': mag_row['# genomes'].values[0],
             'n_markers': mag_row['# markers'].values[0],
@@ -169,9 +169,9 @@ def collect_mags_prodigal(s, pckg, working_dir, output_dir):
         row = {
             'GLab_faa': glab_mag_faa,
             'MAGs': mag,
-            'binID': mag_row['binID'].values[0],
             'sample': s,
 
+            'binID': mag_row['binID'].values[0],
             'Marker lineage': mag_row['Marker lineage'].values[0],
             'n_genomes': mag_row['# genomes'].values[0],
             'n_markers': mag_row['# markers'].values[0],
