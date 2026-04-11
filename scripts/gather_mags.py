@@ -29,10 +29,12 @@ def get_samples(geo_samples:str)->list:
         return []
 
 
-def copy_rename_mag(mag_file, suffix, output_dir, sample_id, glab_signature):
+def copy_rename_mag(mag_file, output_dir, sample_id, glab_signature):
     
-    mag_name = os.path.basename(mag_file)
-    new_mag_name = f"{sample_id}_{glab_signature}_{mag_name}.{suffix}"
+    mag_name = os.path.basename(mag_file).split('.')[0]  # Get the base name without extension
+    extension = os.path.basename(mag_file).split('.')[1]  # Get the extension
+
+    new_mag_name = f"{sample_id}_{glab_signature}_{mag_name}.{extension}"
     
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -83,7 +85,7 @@ def collect_mags(s, pckg, working_dir, output_dir):
             n_contigs += 1
 
         #renaming the MAG file and copying it to the output directory with a new name that includes the sample id and a signature for GLabCoEvo
-        glab_mag = copy_rename_mag(MAG, suffix='fa', output_dir=output_dir, sample_id=s, glab_signature='GlabCoEvo')
+        glab_mag = copy_rename_mag(MAG, output_dir=output_dir, sample_id=s, glab_signature='GlabCoEvo')
 
         mag_row = df_checkm[df_checkm['MAGs'] == mag]
         complet = mag_row['Completeness'].values[0]
@@ -113,10 +115,10 @@ def collect_mags(s, pckg, working_dir, output_dir):
         }
         all_mags_lengths.append(row)
 
-    df = pd.DataFrame(all_mags_lengths)
-    df.to_csv(file_out, sep='\t', index=False)
+    df_samples_mags = pd.DataFrame(all_mags_lengths)
+    #df_samples_mags.to_csv(file_out, sep='\t', index=False)
 
-    return df
+    return df_samples_mags  
 
 def collect_mags_prodigal(s, pckg, working_dir, output_dir):
     """
@@ -158,7 +160,7 @@ def collect_mags_prodigal(s, pckg, working_dir, output_dir):
             total_protein_length += len(record.seq)
         mag_file = os.path.dirname(faa_file)
 
-        glab_mag_faa = copy_rename_mag(mag_file, suffix='faa', output_dir=output_dir, sample_id=s, glab_signature='GlabCoEvo')
+        glab_mag_faa = copy_rename_mag(mag_file, output_dir=output_dir, sample_id=s, glab_signature='GlabCoEvo')
 
         mag_row = df_checkm[df_checkm['MAGs'] == mag]
         complet = mag_row['Completeness'].values[0]
@@ -185,11 +187,10 @@ def collect_mags_prodigal(s, pckg, working_dir, output_dir):
 
         all_mags_prodigal.append(row)
 
-    df = pd.DataFrame(all_mags_prodigal)
-    df.to_csv(file_out, sep='\t', index=False)
+    df_samples_mags = pd.DataFrame(all_mags_prodigal)
+    #df_samples_mags.to_csv(file_out, sep='\t', index=False)
 
-    return df
-
+    return df_samples_mags
 
 
 def main():
