@@ -245,6 +245,11 @@ def parse_args():
         type=str,
         required=True
     )
+    parser.add_argument("-c", "--campaigns",
+        help="Name of the campaigns to be used in the output file names.",
+        type=str,
+        required=True
+    )
     parser.add_argument("-o", "--output_dir",
         help="Where the files are wirtten.",
         type=str,
