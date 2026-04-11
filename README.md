@@ -1,9 +1,6 @@
 
 
-This repository cotains 3 scripts for easing common practices in day-t-day routine:
-- Uploading of raw reads to a server for GEOMOSAIC setup ```geomosaic_uploader.py```, 
-- collection and gathering of basic statistics results obtained after running geomosaic,  ```geomosaic_statistics.py```
-- distribution of newly released sequences from a common folder based on our sample_database.
+This repository cotains three scripts for easing common practices in day-t-day routine. Uploading of raw readds to a server to be ready for GEOMOSAIC setup, collection and gathering of basic statistics regarding results obtained after running geomosaic and distribution of newly released sequences from a common folder based on our sample_database.
 
 
 ### CREATE CONDA ENV
@@ -73,7 +70,7 @@ options:
   -d DATA_DIR, --data_dir DATA_DIR
                         Provide directory ABSOLUTE path storing sample sequences
   -t SAMPLE_TABLE, --sample_table SAMPLE_TABLE
-                        Provide geomosaic ABSOLUTE path to sample table if available
+                        Provide geomosaic ABSOLUTE path to sample table
   -H REMOTE_HOST, --remote_host REMOTE_HOST
                         Provide remote server hostname or IP (e.g. dgiovannelli@ibiscohpc-ui.scope.unina.it)
   -p REMOTE_PATH, --remote_path REMOTE_PATH
@@ -81,12 +78,16 @@ options:
   -c CAMPAIGN_NAME, --campaign_name CAMPAIGN_NAME
                         Provide campaign name: Ex ARG23 or TEST
   -z, --dry_run         Will attempt a dry run without uploading files
+  
 ```
 Example:
 ```bash
-python scripts/geomosaic_uploader.py -d /home/edotacca/working_dir/geomosaic_test/raw/smokingland_core/ -H fmi-ibisco -p /ibiscostorage/fmigliacc
-io/raw/
-
+python scripts/geomosaic_uploader.py \
+-d /mnt/hela/Sequences/CHL22/Metagenomes/  \
+-t /mnt/hela/Sequences/CHL22/Metagenomes/sample_table_chl22_fastp_da_fare.tsv \
+-c chl22 \  
+-H etaccaliti \
+-p /ibiscostorage/GiovannelliLab/raw/ 
 ```
 
 ### DATA-HANDLING
@@ -112,4 +113,17 @@ python scripts/data_handling.py
 -d /data_release/X204SC24072989-Z02-F007/result_X204SC24072989-Z02-F007 
 -f ../../sequencing_data/
 
+```
+
+### Gather MAGs
+
+Script for collecting and renaming sample's MAGs by campaign and creating updated checkm tables
+EXAMPLE script execution:
+
+```bash
+python scripts/gather_mags.py 
+-w /ibiscostorage/dcorso/metagenomics/geomosaic/per22/geomosaic/ \
+-s /ibiscostorage/dcorso/metagenomics/geomosaic/per22/list_samples.txt \
+-o /ibiscostorage/GiovannelliLab/user/etaccaliti/data_paper/PER22 \
+-c PER22
 ```
