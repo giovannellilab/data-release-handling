@@ -81,23 +81,28 @@ def collect_mags(s, pckg, working_dir, output_dir):
         weighted_complet = (complet / 100) * total_mag_length
         weighted_contam = (contam / 100) * total_mag_length
 
-        all_mags_lengths.append({
+        row = {
             'GLab_mag': glab_mag,
             'MAGs': mag,
+            'binID': mag_row['binID'].values[0],
             'sample': s,
+
+            'Marker lineage': mag_row['Marker lineage'].values[0],
+            'n_genomes': mag_row['# genomes'].values[0],
+            'n_markers': mag_row['# markers'].values[0],
+            'n_marker_sets': mag_row['# marker sets'].values[0],
             'Completeness': complet,
             'Contamination': contam,
+            'Strain heterogeneity': mag_row['Strain heterogeneity'].values[0],
+
             'weighted_completeness': weighted_complet,
             'weighted_contamination': weighted_contam,
             'total_length_bp': total_mag_length,
             'n_contigs': n_contigs
-        })
+        }
+        all_mags_lengths.append(row)
 
-    df = pd.DataFrame(all_mags_lengths, columns=[
-        'GLab_mag', 'MAGs', 'sample', 'Completeness', 'Contamination',
-        'weighted_completeness', 'weighted_contamination',
-        'total_length_bp', 'n_contigs'
-    ])
+    df = pd.DataFrame(all_mags_lengths)
     df.to_csv(file_out, sep='\t', index=False)
 
     return df
@@ -148,20 +153,28 @@ def collect_mags_prodigal(s, pckg, working_dir, output_dir):
         complet = mag_row['Completeness'].values[0]
         contam = mag_row['Contamination'].values[0]
 
-        all_mags_prodigal.append({
-            'GLab_mag': glab_mag_faa,
+        row = {
+            'GLab_faa': glab_mag_faa,
             'MAGs': mag,
+            'binID': mag_row['binID'].values[0],
             'sample': s,
+
+            'Marker lineage': mag_row['Marker lineage'].values[0],
+            'n_genomes': mag_row['# genomes'].values[0],
+            'n_markers': mag_row['# markers'].values[0],
+            'n_marker_sets': mag_row['# marker sets'].values[0],
             'Completeness': complet,
             'Contamination': contam,
+            'Strain heterogeneity': mag_row['Strain heterogeneity'].values[0],
+
             'n_proteins': n_proteins,
             'total_protein_length_aa': total_protein_length,
-        })
+            'mean_protein_length_aa': round(total_protein_length / n_proteins, 2) if n_proteins > 0 else 0,
+        }
 
-    df = pd.DataFrame(all_mags_prodigal, columns=[
-        'GLab_mag', 'MAGs', 'sample', 'Completeness', 'Contamination',
-        'n_proteins', 'total_protein_length_aa'
-    ])
+        all_mags_prodigal.append(row)
+
+    df = pd.DataFrame(all_mags_prodigal)
     df.to_csv(file_out, sep='\t', index=False)
 
     return df
