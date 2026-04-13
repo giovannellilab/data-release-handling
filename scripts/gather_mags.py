@@ -17,6 +17,8 @@ from geomosaic_statistics import average
 
 # This script is used to gather the MAGs from the different campaigns and put them in a single folder, with a single metadata file.
 # The script also checks for the presence of the MAGs and their completeness and contamination, and filters them based on the provided thresholds.
+
+
 def get_samples(geo_samples:str)->list:
     
     if os.path.exists(geo_samples):
@@ -31,7 +33,7 @@ def get_samples(geo_samples:str)->list:
 
 def copy_rename_mag(mag_file, output_dir, sample_id, glab_signature):
     
-    if mag_file.endswith('.fa'):
+    if mag_file.endswith('.fna'):
         mag_name = os.path.basename(mag_file).split('.')[0]
         extension = os.path.basename(mag_file).split('.')[1]
 
@@ -53,7 +55,53 @@ def copy_rename_mag(mag_file, output_dir, sample_id, glab_signature):
     return new_mag_name
 
 
-def collect_mags(s, pckg, working_dir, output_dir, campaign):
+
+def get_GTDB_taxonomy(s, working_dir, pckg='mags_gtdbtk'):
+
+    gather_pckg_dir = os.path.join(working_dir, 'gm_gathering', pckg)
+    subfolder = os.path.join(gather_pckg_dir, 'geomosaic_samples')
+    
+    tsv_path = os.path.join(subfolder, f'{s}.tsv')
+
+    if not os.path.exists(tsv_path):
+        tqdm.write(f"No file found at {tsv_path}. Skipping.")
+        return {}
+        
+    try:
+        # Caricamento DataFrame
+        df = pd.read_csv(tsv_path, sep="\t", dtype=str).fillna("")
+        
+        if df.empty:
+            return {}
+        
+        dictio = df.set_index('MAGs').to_dict(orient='index')
+
+        return dictio
+
+    except Exception as exc:
+        tqdm.write(f"[get_GTDB_taxonomy] Failed to read {tsv_path}: {exc}")
+        return {}
+    
+
+    
+def quality_scores(completeness: float,contamination: float)-> str,float:
+
+    if completeness > 90 and contamination < 5:
+        mimag_q = 'HQ'
+    elif completeness >= 50 and contamination < 10:
+        mimag_q = 'MQ'
+    elif completeness < 50 and contamination < 10:
+        mimag_q = 'LQ'
+    else:
+        mimag_q = 'NA' # For high-contamination bins
+    
+    score = completeness - (contamination * 5)
+
+    return mimag_q, score
+
+
+
+def collect_mags(s, pckg, working_dir, output_dir, campaign, sample_gtdbtk_dict):
     """
     Collect MAG data for a single sample.
     Returns a DataFrame or None if the sample should be skipped.
@@ -81,7 +129,9 @@ def collect_mags(s, pckg, working_dir, output_dir, campaign):
 
         total_mag_length, n_contigs = 0, 0
 
-        MAG = os.path.join(pckg_dir, 'fasta', f'{mag}.fa')
+        mag_taxonomy = sample_gtdbtk_dict.get(mag, {}).get('classification', 'Not Classified')
+
+        MAG = os.path.join(pckg_dir, 'fasta', f'{mag}.fna')
         if not os.path.exists(MAG):
             tqdm.write(f"FASTA file for MAG {mag} not found in sample {s}. Skipping.")
             continue
@@ -91,34 +141,39 @@ def collect_mags(s, pckg, working_dir, output_dir, campaign):
             n_contigs += 1
 
         #renaming the MAG file and copying it to the output directory with a new name that includes the sample id and a signature for GLabCoEvo
-        glab_mag = copy_rename_mag(MAG, output_dir=output_dir, sample_id=s, glab_signature='GlabCoEvo')
+        glab_mag = copy_rename_mag(MAG, output_dir=output_dir, sample_id=s, glab_signature='glab')
 
         mag_row = df_checkm[df_checkm['MAGs'] == mag]
         complet = mag_row['Completeness'].values[0]
         contam = mag_row['Contamination'].values[0]
 
-        weighted_complet = (complet / 100) * total_mag_length
-        weighted_contam = (contam / 100) * total_mag_length
+        #weighted_complet = (complet / 100) * total_mag_length
+        #weighted_contam = (contam / 100) * total_mag_length
+        
+        mimag_q , qs = quality_scores(completeness=complet, contamination=contam)
 
         row = {
-            'GLab_mag': glab_mag,
-            'MAGs': mag,
-            'sample': s,
-            'campaign': campaign,
+            'mag_id': glab_mag,
+            'mag_name': mag,
+            'ExpID': campaign,
+            'SampleID': s,
+            'CollectionID': collection_id,
 
-            'binID': mag_row['binID'].values[0],
-            'Marker lineage': mag_row['Marker lineage'].values[0],
+            'binner': mag_row['binID'].values[0],
             'n_genomes': mag_row['# genomes'].values[0],
-            'n_markers': mag_row['# markers'].values[0],
-            'n_marker_sets': mag_row['# marker sets'].values[0],
+            'n_markers': mag_row['# markers'].values[0], #
+            'n_marker_sets': mag_row['# marker sets'].values[0], #
             'Completeness': complet,
             'Contamination': contam,
             'Strain heterogeneity': mag_row['Strain heterogeneity'].values[0],
 
-            'weighted_completeness': weighted_complet,
-            'weighted_contamination': weighted_contam,
             'total_length_bp': total_mag_length,
-            'n_contigs': n_contigs
+            'n_contigs': n_contigs,
+            'quality_score': qs,
+            'mimag_quality' : mimag_q,
+            'marker_lineage': mag_row['Marker lineage'].values[0],
+            'taxonomy': mag_taxonomy
+
         }
         all_mags_lengths.append(row)
 
@@ -165,7 +220,7 @@ def collect_mags_prodigal(s, pckg, working_dir, output_dir, campaign):
             n_proteins += 1
             total_protein_length += len(record.seq)
 
-        glab_mag_faa = copy_rename_mag(faa_file, output_dir=output_dir, sample_id=s, glab_signature='GlabCoEvo')
+        glab_mag_faa = copy_rename_mag(faa_file, output_dir=output_dir, sample_id=s, glab_signature='glab')
 
         mag_row = df_checkm[df_checkm['MAGs'] == mag]
         complet = mag_row['Completeness'].values[0]
@@ -215,7 +270,12 @@ def main():
 
     # gathering checkm data for the MAGs
     for s in tqdm(samples, desc="Processing MAGs"):
-        df_mag = collect_mags(s, 'mags', args.working_dir, args.output_dir, args.campaigns)
+
+        # opening GTDBTK-mags table from geomosiav gathering
+        sample_gtdbtk_dict = get_GTDB_taxonomy(s,args.working_dir)
+        # collecting mags
+        df_mag = collect_mags(s, 'mags', args.working_dir, args.output_dir, args.campaigns, sample_gtdbtk_dict)
+        
         if df_mag is not None:
             all_dataframes_mags.append(df_mag)
 
@@ -263,16 +323,3 @@ def parse_args():
 if __name__ == '__main__':
     main()
 
-# release/
-# ├── MAGs/
-# │   ├── sample1_mag_1.fa
-# │   ├── sample1_mag_2.fa
-# │   └── ...
-# ├── prodigal/
-# │   ├── sample1_mag_1.faa
-# │   ├── sample1_mag_2.faa
-# │   └── ...
-# ├── all_MAGs.tsv          ← combined checkm stats
-# └── all_MAGs_prodigal.tsv ← combined prodigal stats
-
-# tar -czf mags_release.tar.gz release/
