@@ -91,7 +91,7 @@ def collect_mags(s, pckg, working_dir, output_dir, campaign):
             n_contigs += 1
 
         #renaming the MAG file and copying it to the output directory with a new name that includes the sample id and a signature for GLabCoEvo
-        glab_mag = copy_rename_mag(MAG, output_dir=output_dir, sample_id=s, glab_signature='GlabCoEvo')
+        glab_mag = copy_rename_mag(MAG, output_dir=output_dir, sample_id=s, glab_signature='glab')
 
         mag_row = df_checkm[df_checkm['MAGs'] == mag]
         complet = mag_row['Completeness'].values[0]
@@ -165,7 +165,7 @@ def collect_mags_prodigal(s, pckg, working_dir, output_dir, campaign):
             n_proteins += 1
             total_protein_length += len(record.seq)
 
-        glab_mag_faa = copy_rename_mag(faa_file, output_dir=output_dir, sample_id=s, glab_signature='GlabCoEvo')
+        glab_mag_faa = copy_rename_mag(faa_file, output_dir=output_dir, sample_id=s, glab_signature='glab')
 
         mag_row = df_checkm[df_checkm['MAGs'] == mag]
         complet = mag_row['Completeness'].values[0]
@@ -264,11 +264,11 @@ if __name__ == '__main__':
     main()
 
 # release/
-# ├── MAGs/
+# ├── MAGs/ -> GLab-CoEvolve-faa.tar.gz
 # │   ├── sample1_mag_1.fa
 # │   ├── sample1_mag_2.fa
 # │   └── ...
-# ├── prodigal/
+# ├── prodigal/ -> GLabCoEvolve-fna.tar.gz
 # │   ├── sample1_mag_1.faa
 # │   ├── sample1_mag_2.faa
 # │   └── ...
