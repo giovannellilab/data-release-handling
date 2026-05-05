@@ -33,15 +33,19 @@ def get_samples(geo_samples:str)->list:
 
 def copy_rename_mag(mag_file, output_dir, sample_id, glab_signature):
     
-    if mag_file.endswith('.fna'):
+    if mag_file.endswith('.fa'):
         mag_name = os.path.basename(mag_file).split('.')[0]
-        extension = os.path.basename(mag_file).split('.')[1]
+        #extension = os.path.basename(mag_file).split('.')[1]
+        extension = 'fna'
+
 
     elif mag_file.endswith('.faa'):
         mag_name = os.path.dirname(mag_file).split('/')[-1]
         extension = os.path.basename(mag_file).split('.')[1] 
+    
+    mag_glab = str('glab') + mag_name.split('_')[1]
 
-    new_mag_file = f"{sample_id}_{glab_signature}_{mag_name}.{extension}"
+    new_mag_file = f"{sample_id}_{mag_glab}.{extension}"
     new_mag_name = new_mag_file.split('.')[0]
 
     if not os.path.exists(output_dir):
@@ -55,6 +59,18 @@ def copy_rename_mag(mag_file, output_dir, sample_id, glab_signature):
     return new_mag_name
 
 
+def get_collectionId(alias):
+    # First, insert underscore between letters and digits if not already separated
+    # e.g. CY170214_F -> CY_170214_F
+    alias = re.sub(r'([A-Za-z]+)(\d{6})', r'\1_\2', alias)
+    
+    # Now split and take first two parts
+    # PI_210924_S    -> PI_210924
+    # CY_170214_F    -> CY_170214
+    # VL1_240623_S4  -> VL1_240623
+    # SF2C_230609_B  -> SF2C_230609
+    parts = alias.split('_')
+    return '_'.join(parts[:2]) 
 
 def get_GTDB_taxonomy(s, working_dir, pckg='mags_gtdbtk'):
 
@@ -84,7 +100,7 @@ def get_GTDB_taxonomy(s, working_dir, pckg='mags_gtdbtk'):
     
 
     
-def quality_scores(completeness: float,contamination: float)-> str,float:
+def quality_scores(completeness: float,contamination: float)-> tuple:
 
     if completeness > 90 and contamination < 5:
         mimag_q = 'HQ'
@@ -124,6 +140,8 @@ def collect_mags(s, pckg, working_dir, output_dir, campaign, sample_gtdbtk_dict)
 
     mags = df_checkm['MAGs'].to_list()
     all_mags_lengths = []
+    missing = 0
+    total = len(mags)
 
     for mag in mags:
 
@@ -132,23 +150,36 @@ def collect_mags(s, pckg, working_dir, output_dir, campaign, sample_gtdbtk_dict)
         mag_taxonomy = sample_gtdbtk_dict.get(mag, {}).get('classification', 'Not Classified')
 
         MAG = os.path.join(pckg_dir, 'fasta', f'{mag}.fna')
+        
         if not os.path.exists(MAG):
+            missing += 1
+            with open(file_out, 'a') as f_out:
+                f_out.write(f"In sample\t{s}\t{mag} not found\n")
+
             tqdm.write(f"FASTA file for MAG {mag} not found in sample {s}. Skipping.")
             continue
 
-        for record in SeqIO.parse(MAG, 'fasta'):
-            total_mag_length += len(record.seq)
-            n_contigs += 1
+        try:
+            for record in SeqIO.parse(MAG, 'fasta'):
+               total_mag_length += len(record.seq)
+               n_contigs += 1
+
+        except OSError as e:
+            tqdm.write(f"[I/O ERROR] Could not read {MAG}: {e}. Skipping MAG.")
+            with open(file_out, 'a') as f_out:
+                f_out.write(f"IO_ERROR\t{s}\t{mag}\n")
+
+            continue
 
         #renaming the MAG file and copying it to the output directory with a new name that includes the sample id and a signature for GLabCoEvo
         glab_mag = copy_rename_mag(MAG, output_dir=output_dir, sample_id=s, glab_signature='glab')
-
+        # to get the collection id from the sample name, if needed in the future
+        collection_id = get_collectionId(s) 
+        
         mag_row = df_checkm[df_checkm['MAGs'] == mag]
         complet = mag_row['Completeness'].values[0]
         contam = mag_row['Contamination'].values[0]
 
-        #weighted_complet = (complet / 100) * total_mag_length
-        #weighted_contam = (contam / 100) * total_mag_length
         
         mimag_q , qs = quality_scores(completeness=complet, contamination=contam)
 
@@ -172,13 +203,17 @@ def collect_mags(s, pckg, working_dir, output_dir, campaign, sample_gtdbtk_dict)
             'quality_score': qs,
             'mimag_quality' : mimag_q,
             'marker_lineage': mag_row['Marker lineage'].values[0],
+            'gtdb_identity': mag_taxonomy.split(';')[-1] if mag_taxonomy != 'Not Classified' else 'NC',
             'taxonomy': mag_taxonomy
 
         }
         all_mags_lengths.append(row)
 
     df_samples_mags = pd.DataFrame(all_mags_lengths)
-    #df_samples_mags.to_csv(file_out, sep='\t', index=False)
+
+    with open(file_out, 'a') as f_out:
+        f_out.write(f"missing:\t{missing}/{total}\n")
+    df_samples_mags.to_csv(file_out, sep='\t', index=False)
 
     return df_samples_mags  
 
@@ -212,13 +247,18 @@ def collect_mags_prodigal(s, pckg, working_dir, output_dir, campaign):
         n_proteins, total_protein_length = 0, 0
 
         faa_file = os.path.join(pckg_dir, mag, 'orf_predicted.faa')
+        
         if not os.path.exists(faa_file):
             tqdm.write(f"orf_predicted.faa not found for MAG {mag} in sample {s}. Skipping.")
             continue
 
-        for record in SeqIO.parse(faa_file, 'fasta'):
-            n_proteins += 1
-            total_protein_length += len(record.seq)
+        try:
+            for record in SeqIO.parse(faa_file, 'fasta'):
+                n_proteins += 1
+                total_protein_length += len(record.seq)
+        except OSError as e:
+            tqdm.write(f"[I/O ERROR] Could not read {faa_file}: {e}. Skipping MAG.")
+            continue
 
         glab_mag_faa = copy_rename_mag(faa_file, output_dir=output_dir, sample_id=s, glab_signature='glab')
 
@@ -285,6 +325,7 @@ def main():
         
     # gathering prodigal data for the MAGs
     for s in tqdm(samples, desc="Processing MAGs prodigal"):
+
         df = collect_mags_prodigal(s, 'mags_prodigal', args.working_dir, args.output_dir, args.campaigns)
         if df is not None:
             all_dataframes_mags_prodigal.append(df)
@@ -323,19 +364,3 @@ def parse_args():
 if __name__ == '__main__':
     main()
 
-<<<<<<< HEAD
-# release/
-# ├── MAGs/ -> GLab-CoEvolve-faa.tar.gz
-# │   ├── sample1_mag_1.fa
-# │   ├── sample1_mag_2.fa
-# │   └── ...
-# ├── prodigal/ -> GLabCoEvolve-fna.tar.gz
-# │   ├── sample1_mag_1.faa
-# │   ├── sample1_mag_2.faa
-# │   └── ...
-# ├── all_MAGs.tsv          ← combined checkm stats
-# └── all_MAGs_prodigal.tsv ← combined prodigal stats
-
-# tar -czf mags_release.tar.gz release/
-=======
->>>>>>> 724bb1dd803f119d386895bba830052c72195dcb
