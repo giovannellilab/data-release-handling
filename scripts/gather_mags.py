@@ -31,17 +31,19 @@ def get_samples(geo_samples:str)->list:
         return []
 
 
-def copy_rename_mag(mag_file, output_dir, sample_id, glab_signature):
+def copy_rename_mag(mag_file, output_dir, sample_id, glab_signature = None):
     
     if mag_file.endswith('.fa'):
         mag_name = os.path.basename(mag_file).split('.')[0]
         #extension = os.path.basename(mag_file).split('.')[1]
         extension = 'fna'
-
+        output_dir = os.path.join(output_dir, 'genomes')
 
     elif mag_file.endswith('.faa'):
         mag_name = os.path.dirname(mag_file).split('/')[-1]
-        extension = os.path.basename(mag_file).split('.')[1] 
+        extension = os.path.basename(mag_file).split('.')[1]
+        output_dir = os.path.join(output_dir, 'proteins')
+
     
     mag_glab = str('glab') + mag_name.split('_')[1]
 
@@ -124,7 +126,7 @@ def collect_mags(s, pckg, working_dir, output_dir, campaign, sample_gtdbtk_dict)
     """
 
     pckg_dir = os.path.join(working_dir, s, pckg)
-    file_out = os.path.join(output_dir, f'{s}_MAGs.tsv')
+    file_out = os.path.join(output_dir, f'{s}_errors_mags.tsv')
 
     if not os.path.exists(pckg_dir):
         tqdm.write(f'No {s} found at {pckg_dir}. Skipping.')
@@ -149,7 +151,7 @@ def collect_mags(s, pckg, working_dir, output_dir, campaign, sample_gtdbtk_dict)
 
         mag_taxonomy = sample_gtdbtk_dict.get(mag, {}).get('classification', 'Not Classified')
 
-        MAG = os.path.join(pckg_dir, 'fasta', f'{mag}.fna')
+        MAG = os.path.join(pckg_dir, 'fasta', f'{mag}.fa')
         
         if not os.path.exists(MAG):
             missing += 1
@@ -226,7 +228,7 @@ def collect_mags_prodigal(s, pckg, working_dir, output_dir, campaign):
     """
 
     pckg_dir = os.path.join(working_dir, s, pckg)
-    file_out = os.path.join(output_dir, f'{s}_MAGs_prodigal.tsv')
+    file_out = os.path.join(output_dir, f'{s}_errors_prodigal.tsv')
 
     if not os.path.exists(pckg_dir):
         tqdm.write(f'No {s} found at {pckg_dir}. Skipping.')
