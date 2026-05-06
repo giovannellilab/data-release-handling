@@ -101,6 +101,54 @@ def get_GTDB_taxonomy(s, working_dir, pckg='mags_gtdbtk'):
         return {}
     
 
+
+def get_GTDB_taxonomy_2(s, working_dir, pckg='mags_gtdbtk'):
+
+
+    # ANI summary
+    path_ = os.path.join(s,pckg,'classify','ani_screen')
+    #path_ = os.path.join(s,pckg,'classify')
+
+    files = ['gtdbtk.bac120.ani_summary.tsv','gtdbtk.ar53.ani_summary.tsv']
+    #files = ['gtdbtk.bac120.summary.tsv','gtdbtk.ar53.summary.tsv']
+    
+    dfs = []
+
+    for f in files:
+        file = os.path.join(os.path.join(path_,f))
+        if os.path.exists(file):
+            
+            df_set = pd.read_csv(file,sep = '\t')
+
+            if df_set.empty:
+                return None
+            
+            dfs.append(df_set)
+    
+    df_all = pd.concat(dfs)
+    subset_ani = df_all[['user_genome','skani_ani']].copy()
+
+    # # GTDBTK gather
+    # gather_pckg_dir = os.path.join(working_dir, 'gm_gathering', pckg)
+    # subfolder = os.path.join(gather_pckg_dir, 'geomosaic_samples')
+    
+    # tsv_path = os.path.join(subfolder, f'{s}.tsv')
+
+    # if not os.path.exists(tsv_path):
+    #     tqdm.write(f"No file found at {tsv_path}. Skipping.")
+    #     return {}
+    
+    # df = pd.read_csv(tsv_path, sep="\t", dtype=str).fillna("")
+        
+    # if df.empty:
+    #         return None
+
+
+    merge = df.merge(subset_ani, left_on = 'MAGs', right_on = 'user_genome')
+    dictio = merge.set_index('MAGs').to_dict(orient='index')
+
+    return dictio
+
     
 def quality_scores(completeness: float,contamination: float)-> tuple:
 
@@ -314,7 +362,8 @@ def main():
     for s in tqdm(samples, desc="Processing MAGs"):
 
         # opening GTDBTK-mags table from geomosiav gathering
-        sample_gtdbtk_dict = get_GTDB_taxonomy(s,args.working_dir)
+        #sample_gtdbtk_dict = get_GTDB_taxonomy(s,args.working_dir)
+        sample_gtdbtk_dict = get_GTDB_taxonomy_2(s,args.working_dir)
         # collecting mags
         df_mag = collect_mags(s, 'mags', args.working_dir, args.output_dir, args.campaigns, sample_gtdbtk_dict)
         
