@@ -106,7 +106,12 @@ def get_GTDB_taxonomy_2(s, working_dir, pckg='mags_gtdbtk'):
 
 
     # ANI summary
-    path_ = os.path.join(s,pckg,'classify','ani_screen')
+    pkg_path = os.path.join(working_dir, s, pckg)
+    if not os.path.exists(pkg_path):
+        tqdm.write(f"No {s} found at {pkg_path}. Skipping GTDB taxonomy retrieval.")
+        return {}
+    
+    path_ = os.path.join(pkg_path,'classify','ani_screen')
     #path_ = os.path.join(s,pckg,'classify')
 
     files = ['gtdbtk.bac120.ani_summary.tsv','gtdbtk.ar53.ani_summary.tsv']
