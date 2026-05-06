@@ -124,6 +124,8 @@ def get_GTDB_taxonomy_2(s, working_dir, pckg='mags_gtdbtk'):
                 return None
             
             dfs.append(df_set)
+        else:
+            print(f"File {file} not found. Skipping ANI summary {f} for sample {s}.")
     
     df_all = pd.concat(dfs)
     subset_ani = df_all[['user_genome','skani_ani']].copy()
